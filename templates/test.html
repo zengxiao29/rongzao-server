@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试页面</title>
+    <script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/beautiful-chart.js') }}"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        #log {
+            background: white;
+            padding: 15px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        #chartSection {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #ccc;
+        }
+        canvas {
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>测试Excel加载和图表渲染</h1>
+    <button onclick="loadAndTest()">加载1228.xls并测试</button>
+    <div id="log"></div>
+    <div id="chartSection" style="display: none;">
+        <h2>商品销量统计</h2>
+        <canvas id="salesChart" width="800" height="500"></canvas>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+
+        async function loadAndTest() {
+            log('开始测试...');
+            document.getElementById('log').innerHTML = '';
+
+            try {
+                // 读取Excel文件
+                log('正在读取1228.xls文件...');
+                const response = await fetch('/static/1228.xls');
+                if (!response.ok) {
+                    throw new Error('无法读取文件: ' + response.status);
+                }
+
+                const arrayBuffer = await response.arrayBuffer();
+                log('文件读取成功，大小: ' + arrayBuffer.length + ' bytes');
+
+                // 解析Excel
+                log('正在解析Excel...');
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                log('工作表数量: ' + workbook.SheetNames.length);
+                log('工作表名称: ' + workbook.SheetNames.join(', '));
+
+                // 读取第一个工作表
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const excelData = XLSX.utils.sheet_to_json(worksheet);
+
+                log('数据行数: ' + excelData.length);
+                log('列名: ' + Object.keys(excelData[0]).join(', '));
+
+                // 显示前3行数据
+                log('前3行数据:');
+                excelData.slice(0, 3).forEach((row, index) => {
+                    log('  行' + (index + 1) + ': ' + JSON.stringify(row));
+                });
+
+                // 处理数据
+                log('开始处理数据...');
+                const salesData = processExcelData(excelData);
+                log('处理完成，商品数量: ' + salesData.length);
+                log('销量数据: ' + JSON.stringify(salesData.slice(0, 5)));
+
+                // 渲染图表
+                log('开始渲染图表...');
+                document.getElementById('chartSection').style.display = 'block';
+
+                if (typeof BeautifulBarChart === 'undefined') {
+                    throw new Error('BeautifulBarChart未定义');
+                }
+
+                if (window.salesChart && typeof window.salesChart.destroy === 'function') {
+                    window.salesChart.destroy();
+                }
+
+                window.salesChart = new BeautifulBarChart('salesChart', salesData);
+                window.salesChart.animate();
+                log('图表渲染完成！');
+
+            } catch (error) {
+                log('错误: ' + error.message);
+                log('错误堆栈: ' + error.stack);
+                alert('测试失败: ' + error.message);
+            }
+        }
+
+        function processExcelData(excelData) {
+            // 商品名称去重
+            function normalizeProductName(name) {
+                if (!name) return '';
+                name = String(name);
+                name = name.replace(/--.*/, '');
+                name = name.replace(/-\s*\d+[A-Za-z]*/, '');
+                name = name.replace(/-\s*[A-Za-z]+/, '');
+                name = name.replace(/\d+CM$/, '');
+                name = name.replace(/\d+$/, '');
+                return name.trim();
+            }
+
+            const salesMap = new Map();
+
+            excelData.forEach(row => {
+                const productName = normalizeProductName(row['商品名称']);
+                const orderCount = Number(row['订购数']) || 0;
+                const isRefunded = row['是否退款'] === '退款成功';
+
+                if (!productName) return;
+
+                if (salesMap.has(productName)) {
+                    const current = salesMap.get(productName);
+                    if (isRefunded) {
+                        salesMap.set(productName, current - orderCount);
+                    } else {
+                        salesMap.set(productName, current + orderCount);
+                    }
+                } else {
+                    if (isRefunded) {
+                        salesMap.set(productName, -orderCount);
+                    } else {
+                        salesMap.set(productName, orderCount);
+                    }
+                }
+            });
+
+            const salesData = Array.from(salesMap.entries())
+                .map(([name, sales]) => ({ name, sales }))
+                .filter(item => item.sales > 0)
+                .sort((a, b) => b.sales - a.sales);
+
+            return salesData;
+        }
+    </script>
+</body>
+</html>

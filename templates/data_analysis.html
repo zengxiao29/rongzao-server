@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/product-rules.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/beautiful-chart.js') }}"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}" class="back-link">← 返回首页</a>
+        </div>
+        <div class="content">
+            <div class="upload-section">
+                <h2>加载Excel文件</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p class="upload-text">拖拽Excel文件到此处，或</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">选择文件</button>
+                    <p class="upload-hint">支持 .xlsx 和 .xls 格式</p>
+                </div>
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <span class="file-name" id="fileName"></span>
+                    <button class="remove-file" onclick="removeFile()">×</button>
+                </div>
+            </div>
+            <div class="chart-section" id="chartSection" style="display: none;">
+                <h2>商品销量统计</h2>
+                <div class="chart-container">
+                    <canvas id="salesChart" width="800" height="500"></canvas>
+                </div>
+            </div>
+        </div>
+        <script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+    </div>
+</body>
+</html>

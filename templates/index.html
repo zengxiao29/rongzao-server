@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理系统首页</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>管理系统</h1>
+        <div class="menu-grid">
+            <a href="{{ url_for('analyse') }}" class="menu-item">
+                <div class="menu-icon">📊</div>
+                <div class="menu-title">数据分析</div>
+                <div class="menu-desc">查看和分析数据报表</div>
+            </a>
+            <a href="{{ url_for('project_management') }}" class="menu-item">
+                <div class="menu-icon">📁</div>
+                <div class="menu-title">项目管理</div>
+                <div class="menu-desc">管理项目进度和任务</div>
+            </a>
+            <a href="{{ url_for('production_management') }}" class="menu-item">
+                <div class="menu-icon">🏭</div>
+                <div class="menu-title">生产管理</div>
+                <div class="menu-desc">监控和管理生产流程</div>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据分析</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
+    <style>
+        .tab-container {
+            margin-top: 20px;
+            border-bottom: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tab-button {
+            padding: 10px 25px;
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .tab-button.active {
+            border-bottom: 3px solid #667eea;
+            color: #667eea;
+        }
+
+        .table-wrapper {
+            margin-top: 0;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .table-edit-button {
+            padding: 8px 12px;
+            background: transparent;
+            color: #666;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .table-edit-button:hover {
+            color: #f093fb;
+            background: #f8f9ff;
+        }
+
+        .tab-actions {
+            margin-left: 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .add-button {
+            background: #667eea;
+            color: white;
+        }
+
+        .add-button:hover {
+            background: #5568d3;
+        }
+
+        .edit-button {
+            background: #f093fb;
+            color: white;
+        }
+
+        .edit-button:hover {
+            background: #d67ed6;
+        }
+
+        .delete-button {
+            background: #ff4757;
+            color: white;
+        }
+
+        .delete-button:hover {
+            background: #ff3838;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .data-table thead {
+            background: #667eea;
+            color: white;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: #f8f9ff;
+        }
+
+        .data-table tbody tr:nth-child(odd) {
+            background: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .mappings-container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .mapping-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .mapping-row input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .remove-mapping {
+            padding: 8px 15px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .remove-mapping:hover {
+            background: #ff3838;
+        }
+
+        .add-mapping {
+            padding: 8px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .add-mapping:hover {
+            background: #5568d3;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .modal-footer button {
+            padding: 10px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .save-button {
+            background: #667eea;
+            color: white;
+        }
+
+        .save-button:hover {
+            background: #5568d3;
+        }
+
+        .cancel-button {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .cancel-button:hover {
+            background: #e0e0e0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .empty-state p {
+            margin-top: 10px;
+            font-size: 1rem;
+        }
+
+        .upload-result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f9ff;
+            border: 1px solid #667eea;
+            border-radius: 5px;
+        }
+
+        .upload-result p {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .date-filter-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border: 1px solid #667eea;
+            border-radius: 10px;
+        }
+
+        .date-filter-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .date-picker-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .date-picker-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 0 0 auto;
+            min-width: 180px;
+        }
+
+        .date-picker-wrapper label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .date-picker-wrapper input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 150px;
+            color: #333;
+        }
+
+        .date-picker-wrapper input:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .date-picker-wrapper input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .quick-date-buttons {
+            display: flex;
+            gap: 10px;
+            margin-left: 20px;
+            align-items: flex-end;
+        }
+
+        .quick-date-btn {
+            padding: 10px 15px;
+            background: white;
+            color: #667eea;
+            border: 1px solid #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .quick-date-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .date-picker-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        /* 日历弹窗样式 */
+        .date-picker-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .date-picker-modal.show {
+            display: flex;
+        }
+
+        .date-picker-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .date-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .date-picker-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .date-picker-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-picker-nav button {
+            padding: 5px 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .date-picker-nav button:hover {
+            background: #5568d3;
+        }
+
+        .date-picker-nav span {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .date-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .date-picker-day {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .date-picker-day:hover:not(.disabled):not(.selected) {
+            background: #f8f9ff;
+            border-color: #667eea;
+        }
+
+        .date-picker-day.disabled {
+            background: #f5f5f5;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .date-picker-day.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .date-picker-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 15px;
+        }
+
+        .date-picker-footer button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .date-picker-footer .cancel-btn {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .date-picker-footer .cancel-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .date-picker-footer .confirm-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .date-picker-footer .confirm-btn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}" class="back-link">← 返回首页</a>
+            <button class="action-button edit-button" onclick="loadDataFromDb()" style="margin-left: auto;">刷新数据</button>
+        </div>
+        <div class="content">
+            <div class="upload-section">
+                <h2>上传Excel文件到数据库</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p class="upload-text">拖拽Excel文件到此处，或</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">选择文件</button>
+                    <p class="upload-hint">支持 .xlsx 和 .xls 格式</p>
+                </div>
+                <div class="upload-result" id="uploadResult" style="display: none;">
+                    <p id="uploadResultText"></p>
+                </div>
+                
+                <!-- 日期选择区域 -->
+                <div class="date-filter-section" id="dateFilterSection" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0;">统计时间范围</h3>
+                        <button class="action-button add-button" onclick="exportWeeklyReport()">导出周报</button>
+                    </div>
+                    <div class="date-picker-container">
+                        <div class="date-picker-wrapper">
+                            <label>开始日期：</label>
+                            <input type="text" id="startDate" placeholder="选择开始日期" readonly onclick="openDatePicker('start')">
+                        </div>
+                        <div class="date-picker-wrapper">
+                            <label>结束日期：</label>
+                            <input type="text" id="endDate" placeholder="选择结束日期" readonly onclick="openDatePicker('end')">
+                        </div>
+                        <div class="quick-date-buttons">
+                            <button class="quick-date-btn" onclick="setQuickDateRange(7)">最近一周</button>
+                            <button class="quick-date-btn" onclick="setQuickDateRange(30)">最近一月</button>
+                        </div>
+                    </div>
+                    <div class="date-picker-actions">
+                        <button class="action-button add-button" onclick="applyDateFilter()">应用筛选</button>
+                        <button class="action-button" style="background: #f0f0f0; color: #333;" onclick="resetDateFilter()">重置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-section" id="tabSection" style="display: none;">
+                <div class="tab-container" id="tabContainer">
+                    <div class="tab-actions">
+                        <button class="action-button add-button" onclick="openAddTabModal()">+</button>
+                    </div>
+                </div>
+
+                <div class="table-container" id="tableContainer">
+                    <div class="empty-state">
+                        <div style="font-size: 3rem;">📊</div>
+                        <p>请先添加 Tab 配置，然后点击"刷新数据"按钮</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 配置弹窗 -->
+    <div class="modal" id="tabModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增 Tab</h2>
+            </div>
+            <div class="form-group">
+                <label for="tabName">Tab 名称（最多8个字）</label>
+                <input type="text" id="tabName" maxlength="8" placeholder="请输入 Tab 名称">
+            </div>
+            <div class="form-group">
+                <label>商品映射配置</label>
+                <div class="mappings-container" id="mappingsContainer">
+                    <div class="mapping-row">
+                        <input type="text" class="product-input" placeholder="商品名称" />
+                        <input type="text" class="type-input" placeholder="商品类型名称" />
+                        <button class="remove-mapping" onclick="removeMapping(this)">删除</button>
+                    </div>
+                </div>
+                <button class="add-mapping" onclick="addMapping()">+ 添加映射</button>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-button" onclick="closeModal()">取消</button>
+                <button class="save-button" onclick="saveTabConfig()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日期选择弹窗 -->
+    <div class="date-picker-modal" id="datePickerModal">
+        <div class="date-picker-content">
+            <div class="date-picker-header">
+                <div class="date-picker-nav">
+                    <button onclick="changeMonth(-1)">◀</button>
+                    <span id="currentMonthYear"></span>
+                    <button onclick="changeMonth(1)">▶</button>
+                </div>
+                <button onclick="closeDatePicker()" style="background:transparent; color:#333; font-size:18px; padding:5px 10px;">×</button>
+            </div>
+            <div class="date-picker-grid" id="datePickerGrid">
+                <!-- 日期将由JS动态生成 -->
+            </div>
+            <div class="date-picker-footer">
+                <button class="cancel-btn" onclick="closeDatePicker()">取消</button>
+                <button class="confirm-btn" onclick="confirmDate()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/analyse.js') }}"></script>
+</body>
+</html>

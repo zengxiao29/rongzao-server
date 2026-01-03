@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>项目管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}" class="back-link">← 返回首页</a>
+            <h1>项目管理</h1>
+        </div>
+        <div class="content">
+            <p>这里是项目管理页面</p>
+            <div class="info-box">
+                <h2>项目列表</h2>
+                <p>在此页面可以管理项目进度和任务分配</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
