@@ -29,6 +29,11 @@ async function loadDataFromDb() {
             document.getElementById('tabSection').style.display = 'block';
             document.getElementById('dateFilterSection').style.display = 'block';
             renderTableData(data.tabs);
+
+            // 检查是否有未匹配的商品
+            if (data.unmatched_products && data.unmatched_products.length > 0) {
+                showUnmatchedProductsAlert(data.unmatched_products);
+            }
         } else {
             alert('加载数据失败: ' + data.error);
         }
@@ -36,6 +41,12 @@ async function loadDataFromDb() {
         console.error('加载数据失败:', error);
         alert('加载数据失败: ' + error.message);
     }
+}
+
+// 显示未匹配商品的弹窗提示
+function showUnmatchedProductsAlert(unmatchedProducts) {
+    const message = `以下商品名称未在ProductInfo表中找到匹配的映射规则：\n\n${unmatchedProducts.join('\n')}\n\n请在ProductInfo表中添加对应的mapped_title字段。`;
+    alert(message);
 }
 
 // 加载 Tab 配置
@@ -155,6 +166,18 @@ function setupFileUpload() {
     });
 }
 
+// 切换上传区域的显示/隐藏
+function toggleUploadArea() {
+    const uploadArea = document.getElementById('uploadArea');
+    if (uploadArea) {
+        if (uploadArea.style.display === 'none') {
+            uploadArea.style.display = 'block';
+        } else {
+            uploadArea.style.display = 'none';
+        }
+    }
+}
+
 // 处理文件
 function handleFile(file) {
     // 直接上传文件，不显示文件信息
@@ -175,18 +198,19 @@ async function uploadExcelFile(file) {
         const data = await response.json();
 
         if (response.ok) {
-            // 显示上传结果
-            const resultDiv = document.getElementById('uploadResult');
-            const resultText = document.getElementById('uploadResultText');
-            
-            resultText.innerHTML = `
-                <strong>上传完成！</strong><br>
-                总记录数: ${data.total}<br>
-                成功插入: ${data.success_count}<br>
-                重复忽略: ${data.duplicate_count}<br>
-                错误: ${data.error_count}
-            `;
-            resultDiv.style.display = 'block';
+                    // 显示上传结果
+                    const resultDiv = document.getElementById('uploadResult');
+                    const resultText = document.getElementById('uploadResultText');
+                    
+                    resultText.innerHTML = `
+                        <strong>上传完成！</strong>&nbsp;&nbsp;&nbsp;总记录数: ${data.total}&nbsp;&nbsp;&nbsp;成功插入: ${data.success_count}&nbsp;&nbsp;&nbsp;重复忽略: ${data.duplicate_count}&nbsp;&nbsp;&nbsp;过滤忽略: ${data.filtered_count}&nbsp;&nbsp;&nbsp;错误: ${data.error_count}
+                    `;            resultDiv.style.display = 'block';
+
+            // 隐藏上传区域
+            const uploadArea = document.getElementById('uploadArea');
+            if (uploadArea) {
+                uploadArea.style.display = 'none';
+            }
             
             // 显示日期筛选区域
             document.getElementById('dateFilterSection').style.display = 'block';
@@ -665,6 +689,88 @@ async function resetDateFilter() {
     
     // 重新加载所有数据
     await loadDataFromDb();
+}
+
+// 设置当前周的日期范围（周日到周六）
+async function setCurrentWeek() {
+    console.log('===== setCurrentWeek 开始 =====');
+    
+    if (availableDates.length === 0) {
+        alert('数据库中没有可用日期数据');
+        console.log('数据库中没有可用日期数据，跳过设置当前周');
+        return;
+    }
+    
+    // 确保dateFilterSection是可见的
+    const dateFilterSection = document.getElementById('dateFilterSection');
+    if (dateFilterSection && dateFilterSection.style.display === 'none') {
+        dateFilterSection.style.display = 'block';
+    }
+    
+    // 确保tabSection是可见的
+    const tabSection = document.getElementById('tabSection');
+    if (tabSection && tabSection.style.display === 'none') {
+        tabSection.style.display = 'block';
+    }
+    
+    // 获取今天
+    const today = new Date();
+    const todayDay = today.getDay(); // 0=周日, 1=周一, ..., 6=周六
+    
+    // 计算本周日（开始日期）
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - todayDay);
+    
+    // 计算本周六（结束日期）
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + (6 - todayDay));
+    
+    // 格式化日期为 YYYY-MM-DD
+    const formatDate = (date) => {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            console.error('formatDate接收到无效的日期对象');
+            return '';
+        }
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    // 设置选中的日期
+    selectedStartDate = formatDate(startDate);
+    selectedEndDate = formatDate(endDate);
+    
+    console.log('当前周日期范围:', selectedStartDate, '到', selectedEndDate);
+    console.log('selectedStartDate:', selectedStartDate);
+    console.log('selectedEndDate:', selectedEndDate);
+    
+    // 等待一小段时间确保DOM更新
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // 更新输入框显示
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    
+    if (startDateInput) {
+        startDateInput.value = selectedStartDate;
+        console.log('开始日期输入框已更新:', selectedStartDate);
+    } else {
+        console.error('找不到开始日期输入框');
+    }
+    
+    if (endDateInput) {
+        endDateInput.value = selectedEndDate;
+        console.log('结束日期输入框已更新:', selectedEndDate);
+    } else {
+        console.error('找不到结束日期输入框');
+    }
+    
+    // 应用日期筛选
+    await applyDateFilter();
+    
+    console.log('===== setCurrentWeek 结束 =====');
 }
 
 // 设置快捷日期范围

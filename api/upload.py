@@ -151,6 +151,21 @@ def upload_to_database_internal(file):
     df_deduped = df.drop_duplicates(keep='first')
     print(f'Excel内去重: {len(df)} -> {len(df_deduped)} 条记录')
 
+    # 过滤掉店铺名称为"金蝶对接"的记录
+    df_filtered = df_deduped[df_deduped['店铺名称'] != '金蝶对接'].copy()
+    print(f'过滤金蝶对接记录: {len(df_deduped)} -> {len(df_filtered)} 条记录')
+
+    if len(df_filtered) == 0:
+        print('过滤后没有数据可上传')
+        return {
+            'success': True,
+            'total': len(df_deduped),
+            'success_count': 0,
+            'duplicate_count': 0,
+            'error_count': 0,
+            'filtered_count': len(df_deduped)
+        }
+
     # 插入数据库
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -236,12 +251,15 @@ def upload_to_database_internal(file):
     conn.commit()
     conn.close()
 
-    print(f'上传完成: 成功={success_count}, 重复={duplicate_count}, 错误={error_count}')
+    filtered_count = len(df_deduped) - len(df_filtered)
+
+    print(f'上传完成: 成功={success_count}, 重复={duplicate_count}, 错误={error_count}, 过滤={filtered_count}')
 
     return {
         'success': True,
         'total': len(df_deduped),
         'success_count': success_count,
         'duplicate_count': duplicate_count,
-        'error_count': error_count
+        'error_count': error_count,
+        'filtered_count': filtered_count
     }

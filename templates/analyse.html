@@ -293,15 +293,32 @@
 
         .upload-result {
             margin-top: 15px;
-            padding: 15px;
+            padding: 10px 15px;
             background: #f0f9ff;
             border: 1px solid #667eea;
             border-radius: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .upload-result p {
             margin: 0;
-            line-height: 1.6;
+            line-height: 1.5;
+        }
+
+        .upload-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            padding: 15px 0;
+            margin-bottom: 20px;
         }
 
         .date-filter-section {
@@ -331,6 +348,12 @@
             gap: 5px;
             flex: 0 0 auto;
             min-width: 180px;
+        }
+
+        .date-picker-wrapper.horizontal {
+            flex-direction: row;
+            align-items: center;
+            min-width: auto;
         }
 
         .date-picker-wrapper label {
@@ -530,12 +553,14 @@
     <div class="container">
         <div class="header">
             <a href="{{ url_for('index') }}" class="back-link">← 返回首页</a>
-            <button class="action-button edit-button" onclick="loadDataFromDb()" style="margin-left: auto;">刷新数据</button>
         </div>
         <div class="content">
             <div class="upload-section">
-                <h2>上传Excel文件到数据库</h2>
-                <div class="upload-area" id="uploadArea">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 style="margin: 0;">上传Excel文件到数据库</h2>
+                    <button class="action-button add-button" onclick="toggleUploadArea()" id="toggleUploadBtn">上传</button>
+                </div>
+                <div class="upload-area" id="uploadArea" style="display: none;">
                     <div class="upload-icon">📁</div>
                     <p class="upload-text">拖拽Excel文件到此处，或</p>
                     <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
@@ -545,7 +570,9 @@
                 <div class="upload-result" id="uploadResult" style="display: none;">
                     <p id="uploadResultText"></p>
                 </div>
-                
+            </div>
+
+            <div class="upload-section">
                 <!-- 日期选择区域 -->
                 <div class="date-filter-section" id="dateFilterSection" style="display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -553,22 +580,20 @@
                         <button class="action-button add-button" onclick="exportWeeklyReport()">导出周报</button>
                     </div>
                     <div class="date-picker-container">
-                        <div class="date-picker-wrapper">
+                        <div class="date-picker-wrapper horizontal">
                             <label>开始日期：</label>
                             <input type="text" id="startDate" placeholder="选择开始日期" readonly onclick="openDatePicker('start')">
                         </div>
-                        <div class="date-picker-wrapper">
+                        <div class="date-picker-wrapper horizontal">
                             <label>结束日期：</label>
                             <input type="text" id="endDate" placeholder="选择结束日期" readonly onclick="openDatePicker('end')">
+                            <button class="action-button add-button" onclick="applyDateFilter()">应用筛选</button>
                         </div>
                         <div class="quick-date-buttons">
-                            <button class="quick-date-btn" onclick="setQuickDateRange(7)">最近一周</button>
-                            <button class="quick-date-btn" onclick="setQuickDateRange(30)">最近一月</button>
+                            <button class="quick-date-btn" onclick="setQuickDateRange(7)">最近7天</button>
+                            <button class="quick-date-btn" onclick="setQuickDateRange(30)">最近30天</button>
+                            <button class="quick-date-btn" onclick="setCurrentWeek()">当前周</button>
                         </div>
-                    </div>
-                    <div class="date-picker-actions">
-                        <button class="action-button add-button" onclick="applyDateFilter()">应用筛选</button>
-                        <button class="action-button" style="background: #f0f0f0; color: #333;" onclick="resetDateFilter()">重置</button>
                     </div>
                 </div>
             </div>

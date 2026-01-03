@@ -26,111 +26,132 @@ def register_analyse_routes(app):
 
             print(f'筛选参数: 开始日期={start_date}, 结束日期={end_date}')
 
-            # 读取 tab 配置
-            config_file = os.path.join(os.path.dirname(__file__), '..', 'tab_config.json')
-            tabs_config = []
-            if os.path.exists(config_file):
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                    tabs_config = config.get('tabs', [])
-
-            print(f'读取到 {len(tabs_config)} 个 tab 配置')
-
             # 从数据库读取数据
             conn = get_db_connection()
             cursor = conn.cursor()
 
-            # 构建SQL查询
-            sql = 'SELECT * FROM OrderDetails WHERE 1=1'
-            params = []
+            try:
+                # 读取 CategoryInfo 表（作为 tab）
+                cursor.execute('SELECT id, name FROM CategoryInfo ORDER BY id')
+                categories = cursor.fetchall()
+                print(f'读取到 {len(categories)} 个大类')
 
-            if start_date:
-                sql += ' AND 付款时间 >= ?'
-                params.append(start_date)
+                # 读取 ProductInfo 表（用于商品映射）
+                cursor.execute('SELECT name, mapped_title FROM ProductInfo WHERE mapped_title IS NOT NULL AND mapped_title != ""')
+                product_mapping = {row['name']: row['mapped_title'] for row in cursor.fetchall()}
+                print(f'读取到 {len(product_mapping)} 条商品映射规则')
 
-            if end_date:
-                sql += ' AND 付款时间 <= ?'
-                params.append(end_date)
+                # 构建SQL查询
+                sql = 'SELECT * FROM OrderDetails WHERE 1=1'
+                params = []
 
-            sql += ' ORDER BY 付款时间'
+                if start_date:
+                    sql += ' AND 付款时间 >= ?'
+                    params.append(start_date)
 
-            cursor.execute(sql, params)
-            columns = [description[0] for description in cursor.description]
-            rows = cursor.fetchall()
+                if end_date:
+                    sql += ' AND 付款时间 <= ?'
+                    params.append(f'{end_date} 23:59:59')
 
-            # 转换为DataFrame
-            df = pd.DataFrame(rows, columns=columns)
-            conn.close()
+                sql += ' ORDER BY 付款时间'
 
-            print(f'从数据库读取到 {len(df)} 条记录')
+                cursor.execute(sql, params)
+                columns = [description[0] for description in cursor.description]
+                rows = cursor.fetchall()
 
-            # 过滤掉退款的订单
-            df_filtered = df[df['是否退款'] != '退款成功'].copy()
+                # 转换为DataFrame
+                df = pd.DataFrame(rows, columns=columns)
 
-            print(f'过滤退款后剩余 {len(df_filtered)} 行数据')
+                print(f'从数据库读取到 {len(df)} 条记录')
 
-            # 为每个 tab 生成数据
-            tabs_data = []
+                # 过滤掉退款的订单（与PDF导出保持一致的逻辑）
+                df_filtered = df[(df['是否退款'] != '退款成功') & (df['是否退款'] != '退款中') | (df['是否退款'].isna())].copy()
+                print(f'过滤退款后剩余 {len(df_filtered)} 行数据')
 
-            for tab in tabs_config:
-                tab_name = tab['name']
-                mappings = tab['mappings']  # [{'product': '商品名称', 'type': '商品类型'}]
+                # 记录未匹配的商品名称
+                unmatched_products = set()
 
-                # 统计该 tab 下的商品类型数据
-                type_stats = {}
+                # 为每个 category 生成数据
+                # 先读取ProductInfo的category映射
+                cursor.execute('SELECT name, mapped_title, category FROM ProductInfo WHERE mapped_title IS NOT NULL AND mapped_title != ""')
+                product_full_mapping = {}
+                for row in cursor.fetchall():
+                    product_full_mapping[row['name']] = {
+                        'mapped_title': row['mapped_title'],
+                        'category': row['category']
+                    }
 
-                # 为每行商品标记是否已匹配
-                df_filtered['已匹配'] = False
+                # 按mapped_title分组统计
+                mapped_title_stats = {}
 
-                for mapping in mappings:
-                    original_product = mapping['product']
-                    mapped_type = mapping['type']
+                for idx, row in df_filtered.iterrows():
+                    product_name = row['商品名称']
 
-                    # 查找匹配的商品行（子串匹配，只匹配未匹配的行）
-                    mask = ~df_filtered['已匹配'] & df_filtered['商品名称'].str.contains(original_product, na=False)
-                    matching_rows = df_filtered[mask]
+                    # 查找商品映射
+                    product_info = product_full_mapping.get(product_name)
 
-                    print(f'匹配 "{original_product}": 找到 {len(matching_rows)} 行')
+                    if product_info is None or product_info['mapped_title'] is None:
+                        # 未找到映射，记录下来
+                        unmatched_products.add(product_name)
+                        continue
 
-                    if len(matching_rows) > 0:
-                        # 标记这些行为已匹配
-                        df_filtered.loc[matching_rows.index, '已匹配'] = True
+                    mapped_title = product_info['mapped_title']
+                    category_id = product_info['category']
 
-                        # 计算有效订购数
-                        valid_orders = matching_rows['订购数'].sum()
+                    # 计算有效订购数
+                    valid_orders = row['订购数'] if pd.notna(row['订购数']) else 0
 
-                        # 计算让利后金额（如果有此列）
-                        discount_amount = 0
-                        if '让利后金额' in df_filtered.columns:
-                            discount_amount = matching_rows['让利后金额'].sum()
+                    # 计算让利后金额
+                    discount_amount = row['让利后金额'] if pd.notna(row['让利后金额']) else 0
 
-                        if mapped_type not in type_stats:
-                            type_stats[mapped_type] = {
-                                'valid_orders': 0,
-                                'discount_amount': 0
+                    if mapped_title not in mapped_title_stats:
+                        mapped_title_stats[mapped_title] = {
+                            'category': category_id,
+                            'valid_orders': 0,
+                            'discount_amount': 0
+                        }
+
+                    mapped_title_stats[mapped_title]['valid_orders'] += valid_orders
+                    mapped_title_stats[mapped_title]['discount_amount'] += discount_amount
+
+                # 按category分组组织数据
+                tabs_data = []
+                for category in categories:
+                    category_id = category['id']
+                    category_name = category['name']
+
+                    # 找出属于该category的所有mapped_title
+                    type_stats = {}
+                    for mapped_title, stats in mapped_title_stats.items():
+                        if stats['category'] == category_id:
+                            type_stats[mapped_title] = {
+                                'valid_orders': stats['valid_orders'],
+                                'discount_amount': stats['discount_amount']
                             }
 
-                        type_stats[mapped_type]['valid_orders'] += valid_orders
-                        type_stats[mapped_type]['discount_amount'] += discount_amount
+                    # 转换为列表格式
+                    tab_data = {
+                        'name': category_name,
+                        'data': [
+                            {
+                                'product_type': product_type,
+                                'valid_orders': int(stats['valid_orders']),
+                                'discount_amount': float(stats['discount_amount'])
+                            }
+                            for product_type, stats in type_stats.items()
+                        ]
+                    }
 
-                # 转换为列表格式
-                tab_data = {
-                    'name': tab_name,
-                    'data': [
-                        {
-                            'product_type': product_type,
-                            'valid_orders': int(stats['valid_orders']),
-                            'discount_amount': float(stats['discount_amount'])
-                        }
-                        for product_type, stats in type_stats.items()
-                    ]
+                    tabs_data.append(tab_data)
+
+                return {
+                    'tabs': tabs_data,
+                    'unmatched_products': list(unmatched_products)
                 }
 
-                tabs_data.append(tab_data)
+            finally:
+                conn.close()
 
-            return {
-                'tabs': tabs_data
-            }
         except Exception as e:
             print(f'处理数据时出错: {str(e)}')
             import traceback
