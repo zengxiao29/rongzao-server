@@ -241,8 +241,8 @@ async function handleFileUpload(file) {
             uploadResult.style.display = 'block';
             uploadResult.querySelector('p').textContent = result.message;
 
-            // 重新加载数据
-            await loadDataFromDb();
+            // 重新加载数据，并显示未匹配商品的提示
+            await loadDataFromDb(true);
         } else {
             alert('上传失败: ' + result.error);
         }

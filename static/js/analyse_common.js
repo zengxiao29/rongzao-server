@@ -69,8 +69,9 @@ async function loadAvailableDates() {
 
 /**
  * 从数据库加载数据
+ * @param {boolean} showUnmatchedAlert - 是否显示未匹配商品的提示（默认 false）
  */
-async function loadDataFromDb() {
+async function loadDataFromDb(showUnmatchedAlert = false) {
     try {
         const response = await fetch('/api/analyse/data');
         const data = await response.json();
@@ -83,8 +84,8 @@ async function loadDataFromDb() {
                 onDataLoaded(data.tabs, data.unmatched_products);
             }
 
-            // 检查是否有未匹配的商品
-            if (data.unmatched_products && data.unmatched_products.length > 0) {
+            // 检查是否有未匹配的商品（仅在需要时显示提示）
+            if (showUnmatchedAlert && data.unmatched_products && data.unmatched_products.length > 0) {
                 showUnmatchedProductsAlert(data.unmatched_products);
             }
         } else {
