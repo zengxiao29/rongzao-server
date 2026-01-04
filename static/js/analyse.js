@@ -256,12 +256,9 @@ function renderTableData(tabsData) {
         return;
     }
 
-    // 创建表格容器，包含编辑按钮
+    // 创建表格容器
     let containerHTML = `
         <div class="table-wrapper">
-            <div class="table-header">
-                <button class="table-edit-button" onclick="openEditTabModal()">✎</button>
-            </div>
             <table class="data-table">
                 <thead>
                     <tr>

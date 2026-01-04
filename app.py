@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from flask import Flask
 from routes import register_routes
 from api.dates import register_dates_routes
