@@ -29,6 +29,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // 自动设置为最近一个月的数据
     await setQuickDateRange(30);
+
+    // 监听窗口大小变化，自动切换渲染方式
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            // 重新渲染当前数据
+            if (window.tabData) {
+                handleDataLoaded(window.tabData, null);
+            }
+        }, 250); // 防抖，250ms 后执行
+    });
 });
 
 /**
@@ -121,7 +133,7 @@ function renderTabs() {
 }
 
 /**
- * 渲染表格数据（PC 端表格形式）
+ * 渲染表格数据（根据屏幕尺寸自动切换表格/卡片形式）
  */
 function renderTableData(tabs) {
     console.log('renderTableData 被调用');
@@ -155,7 +167,22 @@ function renderTableData(tabs) {
         return;
     }
 
-    // 创建表格容器
+    // 根据屏幕宽度选择渲染方式
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+        // 移动端：渲染卡片式布局
+        renderMobileCards(currentTabData.data, tableContainer);
+    } else {
+        // PC 端：渲染表格形式
+        renderPCTable(currentTabData.data, tableContainer);
+    }
+}
+
+/**
+ * 渲染 PC 端表格
+ */
+function renderPCTable(data, container) {
     let containerHTML = `
         <div class="table-wrapper">
             <table class="data-table">
@@ -172,7 +199,7 @@ function renderTableData(tabs) {
                 <tbody>
     `;
 
-    currentTabData.data.forEach(item => {
+    data.forEach(item => {
         containerHTML += `
             <tr>
                 <td>${item.product_type}</td>
@@ -191,7 +218,45 @@ function renderTableData(tabs) {
         </div>
     `;
 
-    tableContainer.innerHTML = containerHTML;
+    container.innerHTML = containerHTML;
+}
+
+/**
+ * 渲染移动端卡片
+ */
+function renderMobileCards(data, container) {
+    let containerHTML = '<div class="mobile-cards">';
+
+    data.forEach(item => {
+        containerHTML += `
+            <div class="mobile-card">
+                <div class="mobile-card-title">${item.product_type}</div>
+                <div class="mobile-card-item">
+                    <span class="mobile-card-label">有效订购数</span>
+                    <span class="mobile-card-value">${item.valid_orders}</span>
+                </div>
+                <div class="mobile-card-item">
+                    <span class="mobile-card-label">抖音</span>
+                    <span class="mobile-card-value">${item.douyin_orders}</span>
+                </div>
+                <div class="mobile-card-item">
+                    <span class="mobile-card-label">天猫</span>
+                    <span class="mobile-card-value">${item.tmall_orders}</span>
+                </div>
+                <div class="mobile-card-item">
+                    <span class="mobile-card-label">有赞</span>
+                    <span class="mobile-card-value">${item.youzan_orders}</span>
+                </div>
+                <div class="mobile-card-item">
+                    <span class="mobile-card-label">让利后金额</span>
+                    <span class="mobile-card-value highlight">¥${parseFloat(item.discount_amount).toFixed(2)}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    containerHTML += '</div>';
+    container.innerHTML = containerHTML;
 }
 
 // ==================== 文件上传相关（仅 PC 端） ====================

@@ -223,14 +223,14 @@ async function exportWeeklyReport() {
     }
 
     try {
-        const response = await fetch('/api/export/weekly-report', {
+        const response = await fetch('/api/analyse/export-weekly-report', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                start_date: selectedStartDate,
-                end_date: selectedEndDate
+                startDate: selectedStartDate,
+                endDate: selectedEndDate
             })
         });
 
