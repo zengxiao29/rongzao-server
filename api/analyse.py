@@ -84,6 +84,7 @@ def register_analyse_routes(app):
                 # 按mapped_title分组统计
                 mapped_title_stats = {}
 
+                print("开始处理数据...")
                 for idx, row in df_filtered.iterrows():
                     product_name = row['商品名称']
 
@@ -92,6 +93,8 @@ def register_analyse_routes(app):
 
                     if product_info is None or product_info['mapped_title'] is None:
                         # 未找到映射，记录下来
+                        if idx < 30:  # 只打印前30条未匹配的
+                            print(f"未找到映射: {product_name}")
                         unmatched_products.add(product_name)
                         continue
 
@@ -104,15 +107,41 @@ def register_analyse_routes(app):
                     # 计算让利后金额
                     discount_amount = row['让利后金额'] if pd.notna(row['让利后金额']) else 0
 
+                    # 获取店铺类型
+                    shop_type = str(row['店铺类型']) if pd.notna(row['店铺类型']) else ''
+
+                    # 调试：打印所有舰载熊猫系列的商品
+                    if '舰载熊猫' in product_name:
+                        print(f"舰载熊猫商品: {product_name}, 映射: {mapped_title}, 店铺类型: '{shop_type}', 订购数: {valid_orders}")
+
                     if mapped_title not in mapped_title_stats:
                         mapped_title_stats[mapped_title] = {
                             'category': category_id,
                             'valid_orders': 0,
-                            'discount_amount': 0
+                            'discount_amount': 0,
+                            'douyin_orders': 0,
+                            'tmall_orders': 0,
+                            'youzan_orders': 0
                         }
 
+                    # 累加总数
                     mapped_title_stats[mapped_title]['valid_orders'] += valid_orders
                     mapped_title_stats[mapped_title]['discount_amount'] += discount_amount
+
+                    # 按店铺类型统计（只统计这三个渠道的）
+                    if shop_type:
+                        if '抖音' in shop_type or '今日头条' in shop_type or '鲁班' in shop_type:
+                            mapped_title_stats[mapped_title]['douyin_orders'] += valid_orders
+                            if '舰载熊猫' in product_name:
+                                print(f"  -> 匹配到抖音列，累计: {mapped_title_stats[mapped_title]['douyin_orders']}")
+                        elif '天猫' in shop_type:
+                            mapped_title_stats[mapped_title]['tmall_orders'] += valid_orders
+                            if '舰载熊猫' in product_name:
+                                print(f"  -> 匹配到天猫列，累计: {mapped_title_stats[mapped_title]['tmall_orders']}")
+                        elif '有赞' in shop_type:
+                            mapped_title_stats[mapped_title]['youzan_orders'] += valid_orders
+                            if '舰载熊猫' in product_name:
+                                print(f"  -> 匹配到有赞列，累计: {mapped_title_stats[mapped_title]['youzan_orders']}")
 
                 # 按category分组组织数据
                 tabs_data = []
@@ -126,7 +155,10 @@ def register_analyse_routes(app):
                         if stats['category'] == category_id:
                             type_stats[mapped_title] = {
                                 'valid_orders': stats['valid_orders'],
-                                'discount_amount': stats['discount_amount']
+                                'discount_amount': stats['discount_amount'],
+                                'douyin_orders': stats['douyin_orders'],
+                                'tmall_orders': stats['tmall_orders'],
+                                'youzan_orders': stats['youzan_orders']
                             }
 
                     # 转换为列表格式
@@ -135,12 +167,20 @@ def register_analyse_routes(app):
                         'data': [
                             {
                                 'product_type': product_type,
-                                'valid_orders': int(stats['valid_orders']),
-                                'discount_amount': float(stats['discount_amount'])
+                                'valid_orders': int(stats.get('valid_orders', 0)),
+                                'discount_amount': float(stats.get('discount_amount', 0)),
+                                'douyin_orders': int(stats.get('douyin_orders', 0)),
+                                'tmall_orders': int(stats.get('tmall_orders', 0)),
+                                'youzan_orders': int(stats.get('youzan_orders', 0))
                             }
                             for product_type, stats in type_stats.items()
                         ]
                     }
+
+                # 调试信息：打印统计结果
+                print(f'分类 {category_name} 统计结果:')
+                for item in tab_data['data']:
+                    print(f"  {item['product_type']}: 总数={item['valid_orders']}, 抖音={item['douyin_orders']}, 天猫={item['tmall_orders']}, 有赞={item['youzan_orders']}")
 
                     tabs_data.append(tab_data)
 

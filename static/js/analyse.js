@@ -267,6 +267,9 @@ function renderTableData(tabsData) {
                     <tr>
                         <th>商品类型</th>
                         <th>有效订购数</th>
+                        <th>抖音</th>
+                        <th>天猫</th>
+                        <th>有赞</th>
                         <th>让利后金额</th>
                     </tr>
                 </thead>
@@ -278,6 +281,9 @@ function renderTableData(tabsData) {
             <tr>
                 <td>${item.product_type}</td>
                 <td>${item.valid_orders}</td>
+                <td>${item.douyin_orders}</td>
+                <td>${item.tmall_orders}</td>
+                <td>${item.youzan_orders}</td>
                 <td>${item.discount_amount.toFixed(2)}</td>
             </tr>
         `;
