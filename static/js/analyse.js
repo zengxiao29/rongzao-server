@@ -14,11 +14,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     initAnalyseCommon({
         onTabsLoaded: handleTabsLoaded,
         onDataLoaded: handleDataLoaded,
-        onDateChanged: handleDateChanged
+        onDateChanged: handleDateChanged,
+        onTabChanged: handleTabChanged
     });
 
     // 设置文件上传
     setupFileUpload();
+
+    // 加载 Tab 配置
+    await loadTabConfig();
 
     // 加载可用的日期
     await loadAvailableDates();
@@ -44,6 +48,9 @@ function handleTabsLoaded(tabs) {
  * 数据加载完成后的回调
  */
 function handleDataLoaded(tabs, unmatchedProducts) {
+    console.log('handleDataLoaded 被调用');
+    console.log('tabs:', tabs);
+    console.log('currentTab:', getCurrentTab());
     renderTableData(tabs);
 }
 
@@ -52,6 +59,21 @@ function handleDataLoaded(tabs, unmatchedProducts) {
  */
 function handleDateChanged(startDate, endDate) {
     // PC 端可以在这里添加额外的日期变更处理
+}
+
+/**
+ * Tab 切换后的回调
+ */
+function handleTabChanged(tabName) {
+    // 更新所有 Tab 按钮的选中状态
+    const tabButtons = document.querySelectorAll('.tab-button:not(.tab-actions button)');
+    tabButtons.forEach(button => {
+        if (button.textContent === tabName) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
 }
 
 /**
@@ -102,9 +124,11 @@ function renderTabs() {
  * 渲染表格数据（PC 端表格形式）
  */
 function renderTableData(tabs) {
+    console.log('renderTableData 被调用');
     const tableContainer = document.getElementById('tableContainer');
 
     if (!tabs || tabs.length === 0) {
+        console.log('tabs 为空或长度为 0');
         tableContainer.innerHTML = `
             <div class="empty-state">
                 <div style="font-size: 3rem;">📊</div>
@@ -115,9 +139,13 @@ function renderTableData(tabs) {
     }
 
     // 找到当前 Tab 的数据
-    const currentTabData = tabs.find(tab => tab.name === getCurrentTab());
+    const currentTabName = getCurrentTab();
+    console.log('当前 Tab 名称:', currentTabName);
+    console.log('可用的 Tabs:', tabs.map(t => t.name));
+    const currentTabData = tabs.find(tab => tab.name === currentTabName);
 
     if (!currentTabData || !currentTabData.data || currentTabData.data.length === 0) {
+        console.log('当前 Tab 数据为空或不存在');
         tableContainer.innerHTML = `
             <div class="empty-state">
                 <div style="font-size: 3rem;">📊</div>

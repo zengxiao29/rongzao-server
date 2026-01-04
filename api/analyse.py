@@ -177,17 +177,17 @@ def register_analyse_routes(app):
                         ]
                     }
 
-                # 调试信息：打印统计结果
-                print(f'分类 {category_name} 统计结果:')
-                for item in tab_data['data']:
-                    print(f"  {item['product_type']}: 总数={item['valid_orders']}, 抖音={item['douyin_orders']}, 天猫={item['tmall_orders']}, 有赞={item['youzan_orders']}")
+                    # 调试信息：打印统计结果
+                    print(f'分类 {category_name} 统计结果:')
+                    for item in tab_data['data']:
+                        print(f"  {item['product_type']}: 总数={item['valid_orders']}, 抖音={item['douyin_orders']}, 天猫={item['tmall_orders']}, 有赞={item['youzan_orders']}")
 
                     tabs_data.append(tab_data)
 
-                return {
+                return jsonify({
                     'tabs': tabs_data,
                     'unmatched_products': list(unmatched_products)
-                }
+                })
 
             finally:
                 conn.close()

@@ -14,6 +14,7 @@ let selectedEndDate = null;
 let onTabsLoaded = null; // Tab 加载完成后的回调
 let onDataLoaded = null; // 数据加载完成后的回调
 let onDateChanged = null; // 日期变更后的回调
+let onTabChanged = null; // Tab 切换后的回调
 
 /**
  * 初始化公共逻辑
@@ -23,6 +24,7 @@ function initAnalyseCommon(callbacks = {}) {
     onTabsLoaded = callbacks.onTabsLoaded || null;
     onDataLoaded = callbacks.onDataLoaded || null;
     onDateChanged = callbacks.onDateChanged || null;
+    onTabChanged = callbacks.onTabChanged || null;
 }
 
 /**
@@ -73,7 +75,16 @@ async function loadAvailableDates() {
  */
 async function loadDataFromDb(showUnmatchedAlert = false) {
     try {
-        const response = await fetch('/api/analyse/data');
+        const response = await fetch('/api/analyse/data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                startDate: selectedStartDate,
+                endDate: selectedEndDate
+            })
+        });
         const data = await response.json();
 
         if (response.ok) {
@@ -115,6 +126,11 @@ function switchTab(tabName) {
     // 调用回调，让页面重新渲染
     if (onDataLoaded && window.tabData) {
         onDataLoaded(window.tabData, null);
+    }
+
+    // 调用 Tab 切换回调，更新 Tab 按钮的选中状态
+    if (onTabChanged) {
+        onTabChanged(tabName);
     }
 }
 

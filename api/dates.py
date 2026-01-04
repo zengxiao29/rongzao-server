@@ -36,11 +36,11 @@ def register_dates_routes(app):
                 # 转换为排序后的列表
                 sorted_dates = sorted(list(dates))
 
-                return {
+                return jsonify({
                     'success': True,
                     'dates': sorted_dates,
                     'count': len(sorted_dates)
-                }
+                })
 
             finally:
                 conn.close()
