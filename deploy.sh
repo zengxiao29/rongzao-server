@@ -62,8 +62,15 @@ echo "步骤 9: 测试启动应用..."
 echo "应用将在后台启动，使用以下命令查看日志："
 echo "  tail -f logs/app.log"
 echo ""
-echo "按 Ctrl+C 停止应用"
-echo ""
+
+# 检查是否为生产环境
+if [ "$FLASK_ENV" = "production" ]; then
+    echo "生产环境模式：使用端口 80"
+    PORT=80
+else
+    echo "开发环境模式：使用端口 5001"
+    PORT=5001
+fi
 
 # 使用 nohup 在后台启动应用
 nohup python app.py > logs/app.log 2>&1 &

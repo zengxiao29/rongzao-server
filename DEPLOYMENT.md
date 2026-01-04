@@ -193,22 +193,54 @@ scp rongzao.db user@your-server:/path/to/rongzao-server/
 ## 9. 快速部署命令
 
 ### 在服务器上执行：
+
+#### 生产环境（使用 80 端口）
 ```bash
 # 1. 安装 Python 3 和 pip
 sudo apt update
 sudo apt install python3 python3-pip python3-venv
 
-# 2. 创建虚拟环境
-cd /path/to/rongzao_server
+# 2. 克隆代码
+cd /path/to/your/project
+git clone git@github.com:zengxiao29/rongzao-server.git
+cd rongzao-server
+
+# 3. 创建虚拟环境
 python3 -m venv venv
 source venv/bin/activate
 
-# 3. 安装依赖
-pip install -r requirements.txt
+# 4. 安装依赖
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
-# 4. 启动应用
-python app.py
+# 5. 启动生产环境服务（端口 80）
+bash start_production.sh
 ```
+
+#### 开发环境（使用 5001 端口）
+```bash
+# 1-4 步骤同上
+
+# 5. 启动开发环境服务（端口 5001）
+bash start_dev.sh
+```
+
+### 本地开发环境（Mac）
+
+```bash
+# 直接运行
+bash start_dev.sh
+
+# 或者
+python3 app.py
+```
+
+### 端口说明
+
+- **开发环境**：5001 端口（本地 Mac）
+- **生产环境**：80 端口（Ubuntu 服务器）
+- **自动切换**：通过 `FLASK_ENV` 环境变量控制
+  - 开发环境：`export FLASK_ENV=development` 或不设置
+  - 生产环境：`export FLASK_ENV=production`
 
 ## 10. 检查清单
 

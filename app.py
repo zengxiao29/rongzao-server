@@ -22,4 +22,19 @@ register_export_routes(app)
 register_metabase_routes(app)
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    # 从环境变量获取配置，默认为开发环境
+    env = os.environ.get('FLASK_ENV', 'development')
+    
+    # 根据环境选择配置
+    if env == 'production':
+        # 生产环境：使用 80 端口
+        port = 80
+        debug = False
+        print("运行模式: 生产环境 (端口 80)")
+    else:
+        # 开发环境：使用 5001 端口
+        port = 5001
+        debug = True
+        print("运行模式: 开发环境 (端口 5001)")
+    
+    app.run(debug=debug, host='0.0.0.0', port=port)
