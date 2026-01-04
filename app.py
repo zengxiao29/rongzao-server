@@ -22,15 +22,14 @@ register_export_routes(app)
 register_metabase_routes(app)
 
 if __name__ == '__main__':
-    # 从环境变量获取配置，默认为开发环境
-    env = os.environ.get('FLASK_ENV', 'development')
+    # 检查是否为服务器环境（通过 .ecs 文件判断）
+    is_server = os.path.exists('.ecs')
     
-    # 根据环境选择配置
-    if env == 'production':
-        # 生产环境：使用 80 端口
+    if is_server:
+        # 服务器环境：使用 80 端口
         port = 80
         debug = False
-        print("运行模式: 生产环境 (端口 80)")
+        print("运行模式: 服务器环境 (端口 80)")
     else:
         # 开发环境：使用 5001 端口
         port = 5001

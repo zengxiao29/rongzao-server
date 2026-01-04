@@ -63,13 +63,11 @@ echo "应用将在后台启动，使用以下命令查看日志："
 echo "  tail -f logs/app.log"
 echo ""
 
-# 检查是否为生产环境
-if [ "$FLASK_ENV" = "production" ]; then
-    echo "生产环境模式：使用端口 80"
-    PORT=80
+# 检查是否为服务器环境
+if [ -f ".ecs" ]; then
+    echo "服务器环境检测到 .ecs 文件，将使用端口 80"
 else
-    echo "开发环境模式：使用端口 5001"
-    PORT=5001
+    echo "开发环境（未检测到 .ecs 文件），将使用端口 5001"
 fi
 
 # 使用 nohup 在后台启动应用

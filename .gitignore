@@ -36,6 +36,9 @@ env/
 .DS_Store
 Thumbs.db
 
+# Server标识文件（不提交到Git）
+.ecs
+
 # Database
 # *.db
 # *.sqlite

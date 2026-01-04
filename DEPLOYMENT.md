@@ -194,7 +194,6 @@ scp rongzao.db user@your-server:/path/to/rongzao-server/
 
 ### 在服务器上执行：
 
-#### 生产环境（使用 80 端口）
 ```bash
 # 1. 安装 Python 3 和 pip
 sudo apt update
@@ -212,35 +211,27 @@ source venv/bin/activate
 # 4. 安装依赖
 pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
-# 5. 启动生产环境服务（端口 80）
-bash start_production.sh
-```
+# 5. 创建 .ecs 标识文件（表示这是服务器环境）
+touch .ecs
 
-#### 开发环境（使用 5001 端口）
-```bash
-# 1-4 步骤同上
-
-# 5. 启动开发环境服务（端口 5001）
-bash start_dev.sh
+# 6. 部署
+bash deploy.sh
 ```
 
 ### 本地开发环境（Mac）
 
 ```bash
 # 直接运行
-bash start_dev.sh
-
-# 或者
 python3 app.py
 ```
 
 ### 端口说明
 
-- **开发环境**：5001 端口（本地 Mac）
-- **生产环境**：80 端口（Ubuntu 服务器）
-- **自动切换**：通过 `FLASK_ENV` 环境变量控制
-  - 开发环境：`export FLASK_ENV=development` 或不设置
-  - 生产环境：`export FLASK_ENV=production`
+- **开发环境**：5001 端口（本地 Mac，无 .ecs 文件）
+- **服务器环境**：80 端口（Ubuntu 服务器，有 .ecs 文件）
+- **自动切换**：通过检查项目根目录是否存在 `.ecs` 文件
+  - 开发环境：不创建 `.ecs` 文件
+  - 服务器环境：手动创建 `.ecs` 文件
 
 ## 10. 检查清单
 
