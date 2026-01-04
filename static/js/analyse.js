@@ -27,8 +27,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 加载可用的日期
     await loadAvailableDates();
 
-    // 自动设置为最近一个月的数据
-    await setQuickDateRange(30);
+    // 设置默认日期范围：结束日期为最后可用日期，开始日期为往前6天
+    if (availableDates.length > 0) {
+        const lastDate = availableDates[availableDates.length - 1];
+        const lastDateObj = new Date(lastDate);
+        const startDateObj = new Date(lastDateObj);
+        startDateObj.setDate(startDateObj.getDate() - 6);
+        
+        selectedStartDate = formatDate(startDateObj);
+        selectedEndDate = lastDate;
+        
+        document.getElementById('startDate').value = selectedStartDate;
+        document.getElementById('endDate').value = selectedEndDate;
+        
+        // 加载数据
+        await loadDataFromDb();
+    }
 
     // 监听窗口大小变化，自动切换渲染方式
     let resizeTimeout;
@@ -183,25 +197,55 @@ function renderTableData(tabs) {
  * 渲染 PC 端表格
  */
 function renderPCTable(data, container) {
+    // 计算合计
+    let totalValidOrders = 0;
+    let totalDouyinOrders = 0;
+    let totalTmallOrders = 0;
+    let totalYouzanOrders = 0;
+    let totalDiscountAmount = 0;
+
+    data.forEach(item => {
+        totalValidOrders += item.valid_orders;
+        totalDouyinOrders += item.douyin_orders;
+        totalTmallOrders += item.tmall_orders;
+        totalYouzanOrders += item.youzan_orders;
+        totalDiscountAmount += item.discount_amount;
+    });
+
     let containerHTML = `
         <div class="table-wrapper">
-            <table class="data-table">
+            <table class="data-table" id="dataTable">
                 <thead>
                     <tr>
                         <th>商品类型</th>
-                        <th>有效订购数</th>
-                        <th>抖音</th>
-                        <th>天猫</th>
-                        <th>有赞</th>
-                        <th>让利后金额</th>
+                        <th>
+                            有效订购数
+                            <button class="sort-btn" onclick="sortTable(1, 'valid_orders')">▼</button>
+                        </th>
+                        <th>
+                            抖音
+                            <button class="sort-btn" onclick="sortTable(2, 'douyin_orders')">▼</button>
+                        </th>
+                        <th>
+                            天猫
+                            <button class="sort-btn" onclick="sortTable(3, 'tmall_orders')">▼</button>
+                        </th>
+                        <th>
+                            有赞
+                            <button class="sort-btn" onclick="sortTable(4, 'youzan_orders')">▼</button>
+                        </th>
+                        <th>
+                            让利后金额
+                            <button class="sort-btn" onclick="sortTable(5, 'discount_amount')">▼</button>
+                        </th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tableBody">
     `;
 
-    data.forEach(item => {
+    data.forEach((item, index) => {
         containerHTML += `
-            <tr>
+            <tr data-index="${index}">
                 <td>${item.product_type}</td>
                 <td>${item.valid_orders}</td>
                 <td>${item.douyin_orders}</td>
@@ -211,6 +255,18 @@ function renderPCTable(data, container) {
             </tr>
         `;
     });
+
+    // 添加合计行
+    containerHTML += `
+            <tr class="total-row" style="background-color: #f0f0f0; font-weight: bold;">
+                <td>合计</td>
+                <td>${totalValidOrders}</td>
+                <td>${totalDouyinOrders}</td>
+                <td>${totalTmallOrders}</td>
+                <td>${totalYouzanOrders}</td>
+                <td>¥${totalDiscountAmount.toFixed(2)}</td>
+            </tr>
+    `;
 
     containerHTML += `
                 </tbody>
@@ -222,9 +278,58 @@ function renderPCTable(data, container) {
 }
 
 /**
+ * 表格排序函数
+ * @param {number} columnIndex - 列索引（0开始）
+ * @param {string} dataKey - 数据字段名
+ */
+function sortTable(columnIndex, dataKey) {
+    const tableBody = document.getElementById('tableBody');
+    const allRows = Array.from(tableBody.querySelectorAll('tr'));
+
+    // 分离数据行和合计行
+    const dataRows = allRows.filter(row => !row.classList.contains('total-row'));
+    const totalRow = allRows.find(row => row.classList.contains('total-row'));
+
+    // 对数据行进行排序
+    dataRows.sort((a, b) => {
+        const aValue = parseFloat(a.cells[columnIndex].textContent);
+        const bValue = parseFloat(b.cells[columnIndex].textContent);
+        return bValue - aValue; // 降序排列
+    });
+
+    // 清空表格内容
+    tableBody.innerHTML = '';
+
+    // 重新插入排序后的数据行
+    dataRows.forEach(row => {
+        tableBody.appendChild(row);
+    });
+
+    // 最后插入合计行
+    if (totalRow) {
+        tableBody.appendChild(totalRow);
+    }
+}
+
+/**
  * 渲染移动端卡片
  */
 function renderMobileCards(data, container) {
+    // 计算合计
+    let totalValidOrders = 0;
+    let totalDouyinOrders = 0;
+    let totalTmallOrders = 0;
+    let totalYouzanOrders = 0;
+    let totalDiscountAmount = 0;
+
+    data.forEach(item => {
+        totalValidOrders += item.valid_orders;
+        totalDouyinOrders += item.douyin_orders;
+        totalTmallOrders += item.tmall_orders;
+        totalYouzanOrders += item.youzan_orders;
+        totalDiscountAmount += item.discount_amount;
+    });
+
     let containerHTML = '<div class="mobile-cards">';
 
     data.forEach(item => {
@@ -254,6 +359,33 @@ function renderMobileCards(data, container) {
             </div>
         `;
     });
+
+    // 添加合计卡片
+    containerHTML += `
+        <div class="mobile-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="mobile-card-title" style="border-bottom-color: rgba(255, 255, 255, 0.3);">合计</div>
+            <div class="mobile-card-item">
+                <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">有效订购数</span>
+                <span class="mobile-card-value" style="color: white;">${totalValidOrders}</span>
+            </div>
+            <div class="mobile-card-item">
+                <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">抖音</span>
+                <span class="mobile-card-value" style="color: white;">${totalDouyinOrders}</span>
+            </div>
+            <div class="mobile-card-item">
+                <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">天猫</span>
+                <span class="mobile-card-value" style="color: white;">${totalTmallOrders}</span>
+            </div>
+            <div class="mobile-card-item">
+                <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">有赞</span>
+                <span class="mobile-card-value" style="color: white;">${totalYouzanOrders}</span>
+            </div>
+            <div class="mobile-card-item">
+                <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">让利后金额</span>
+                <span class="mobile-card-value" style="color: white;">¥${totalDiscountAmount.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
 
     containerHTML += '</div>';
     container.innerHTML = containerHTML;
@@ -322,7 +454,7 @@ async function handleFileUpload(file) {
     formData.append('file', file);
 
     try {
-        const response = await fetch('/api/upload/excel', {
+        const response = await fetch('/api/analyse/upload', {
             method: 'POST',
             body: formData
         });
@@ -332,10 +464,11 @@ async function handleFileUpload(file) {
         if (response.ok) {
             const uploadResult = document.getElementById('uploadResult');
             uploadResult.style.display = 'block';
-            uploadResult.querySelector('p').textContent = result.message;
+            const message = `上传完成！总计 ${result.total} 条，成功 ${result.success_count} 条，重复 ${result.duplicate_count} 条，错误 ${result.error_count} 条`;
+            uploadResult.querySelector('p').textContent = message;
 
-            // 重新加载数据，并显示未匹配商品的提示
-            await loadDataFromDb(true);
+            // 重新加载数据
+            await loadDataFromDb();
         } else {
             alert('上传失败: ' + result.error);
         }
@@ -413,11 +546,24 @@ function renderDatePicker() {
         const dateStr = formatDate(date);
         const isSelected = dateStr === document.getElementById(currentDatePicker === 'start' ? 'startDate' : 'endDate').value;
 
-        html += `
-            <div class="date-picker-day ${isSelected ? 'selected' : ''}" onclick="selectDate('${dateStr}')">
-                ${day}
-            </div>
-        `;
+        // 检查该日期是否在可用日期列表中
+        const isAvailable = availableDates.includes(dateStr);
+
+        if (isAvailable) {
+            // 可用的日期，可以点击
+            html += `
+                <div class="date-picker-day ${isSelected ? 'selected' : ''}" onclick="selectDate('${dateStr}')">
+                    ${day}
+                </div>
+            `;
+        } else {
+            // 不可用的日期，置灰且不可点击
+            html += `
+                <div class="date-picker-day disabled">
+                    ${day}
+                </div>
+            `;
+        }
     }
 
     grid.innerHTML = html;

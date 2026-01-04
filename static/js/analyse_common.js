@@ -164,13 +164,13 @@ async function applyDateFilter() {
 
 /**
  * 设置快捷日期范围
- * @param {number} days - 天数
+ * @param {number} days - 总天数（包括今天）
  */
 async function setQuickDateRange(days) {
     const today = new Date();
     const endDate = new Date(today);
     const startDate = new Date(today);
-    startDate.setDate(today.getDate() - days);
+    startDate.setDate(today.getDate() - (days - 1)); // 往前数 days-1 天
 
     selectedStartDate = formatDate(startDate);
     selectedEndDate = formatDate(endDate);

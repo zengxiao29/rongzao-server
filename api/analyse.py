@@ -149,16 +149,34 @@ def register_analyse_routes(app):
                     category_id = category['id']
                     category_name = category['name']
 
-                    # 找出属于该category的所有mapped_title
+                    # 找出属于该category的所有mapped_title（从ProductInfo中获取）
+                    category_mapped_titles = {}
+                    for name, info in product_full_mapping.items():
+                        if info['category'] == category_id and info['mapped_title']:
+                            mapped_title = info['mapped_title']
+                            if mapped_title not in category_mapped_titles:
+                                category_mapped_titles[mapped_title] = True
+
+                    # 为每个mapped_title准备统计数据，默认为0
                     type_stats = {}
-                    for mapped_title, stats in mapped_title_stats.items():
-                        if stats['category'] == category_id:
+                    for mapped_title in category_mapped_titles.keys():
+                        if mapped_title in mapped_title_stats:
+                            stats = mapped_title_stats[mapped_title]
                             type_stats[mapped_title] = {
                                 'valid_orders': stats['valid_orders'],
                                 'discount_amount': stats['discount_amount'],
                                 'douyin_orders': stats['douyin_orders'],
                                 'tmall_orders': stats['tmall_orders'],
                                 'youzan_orders': stats['youzan_orders']
+                            }
+                        else:
+                            # 没有数据，设置为0
+                            type_stats[mapped_title] = {
+                                'valid_orders': 0,
+                                'discount_amount': 0.0,
+                                'douyin_orders': 0,
+                                'tmall_orders': 0,
+                                'youzan_orders': 0
                             }
 
                     # 转换为列表格式
@@ -176,6 +194,14 @@ def register_analyse_routes(app):
                             for product_type, stats in type_stats.items()
                         ]
                     }
+
+                    # 排序：包含"其它"或"其他"的商品类型放在最后
+                    def sort_key(item):
+                        product_type = item['product_type']
+                        # 如果包含"其它"或"其他"，返回1，否则返回0
+                        return 1 if '其它' in product_type or '其他' in product_type else 0
+
+                    tab_data['data'].sort(key=sort_key)
 
                     # 调试信息：打印统计结果
                     print(f'分类 {category_name} 统计结果:')
