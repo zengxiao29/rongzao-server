@@ -1,0 +1,21 @@
+[Unit]
+Description=Rongzao Flask Application
+After=network.target
+
+[Service]
+Type=simple
+User=your-username  # 替换为实际的用户名
+Group=your-group    # 替换为实际的组名
+WorkingDirectory=/path/to/rongzao_server  # 替换为实际的项目路径
+Environment="PATH=/path/to/rongzao_server/venv/bin"
+ExecStart=/path/to/rongzao_server/venv/bin/python app.py
+Restart=always
+RestartSec=10
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rongzao
+
+[Install]
+WantedBy=multi-user.target

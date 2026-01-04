@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metabase 测试页面</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .back-link:hover {
+            background: #5568d3;
+        }
+
+        .metabase-container {
+            width: 100%;
+            height: 800px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .metabase-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{{ url_for('index') }}" class="back-link">← 返回首页</a>
+            <h1>Metabase 嵌入测试</h1>
+            <p>ProductInfo 表数据展示（优先使用嵌入式仪表板，失败则使用公共链接）</p>
+        </div>
+
+        <div class="metabase-container" id="metabaseContainer">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        // Metabase 配置
+        const DASHBOARD_ID = 2;
+        const PUBLIC_UUID = 'd4ef117d-69a6-4e37-b096-6b036159c1ab';
+
+        // 生成 JWT token
+        async function generateToken() {
+            try {
+                const response = await fetch('/api/metabase/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        dashboard_id: DASHBOARD_ID
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.url;
+                } else {
+                    console.error('获取 token 失败:', await response.text());
+                    return null;
+                }
+            } catch (error) {
+                console.error('获取 token 失败:', error);
+                return null;
+            }
+        }
+
+        // 嵌入 Metabase 仪表板
+        async function embedDashboard() {
+            const iframeUrl = await generateToken();
+
+            if (!iframeUrl) {
+                console.log('无法获取 JWT token，使用公共链接');
+                embedQuestion();
+                return;
+            }
+
+            const iframe = document.createElement('iframe');
+            iframe.src = iframeUrl;
+            iframe.frameBorder = "0";
+            iframe.width = "800";
+            iframe.height = "600";
+            iframe.allowTransparency = true;
+
+            // 监听加载错误
+            iframe.onerror = function() {
+                console.log('嵌入式仪表板加载失败，切换到公共链接');
+                embedQuestion();
+            };
+
+            // 监听加载完成
+            iframe.onload = function() {
+                console.log('嵌入式仪表板加载成功');
+            };
+
+            document.getElementById('metabaseContainer').innerHTML = '';
+            document.getElementById('metabaseContainer').appendChild(iframe);
+        }
+
+        // 嵌入 Metabase 问题（备用方案）
+        function embedQuestion() {
+            const iframeUrl = `http://localhost:3000/public/question/${PUBLIC_UUID}`;
+
+            const iframe = document.createElement('iframe');
+            iframe.src = iframeUrl;
+            iframe.frameBorder = "0";
+            iframe.width = "800";
+            iframe.height = "600";
+            iframe.allowTransparency = true;
+
+            document.getElementById('metabaseContainer').innerHTML = '';
+            document.getElementById('metabaseContainer').appendChild(iframe);
+        }
+
+        // 页面加载时嵌入仪表板
+        document.addEventListener('DOMContentLoaded', embedDashboard);
+    </script>
+</body>
+</html>

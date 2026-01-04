@@ -37,9 +37,9 @@ env/
 Thumbs.db
 
 # Database
-*.db
-*.sqlite
-*.sqlite3
+# *.db
+# *.sqlite
+# *.sqlite3
 
 # Logs
 *.log
