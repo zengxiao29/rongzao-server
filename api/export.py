@@ -63,7 +63,9 @@ def register_export_routes(app):
                     AND (是否退款 != "退款成功" AND 是否退款 != "退款中" OR 是否退款 IS NULL)
                     ORDER BY 付款时间
                 '''
-                cursor.execute(sql, (start_date, end_date))
+                # 将结束日期加上时间部分，以包含当天的所有数据
+                end_date_with_time = f"{end_date} 23:59:59"
+                cursor.execute(sql, (start_date, end_date_with_time))
                 rows = cursor.fetchall()
 
                 if not rows:

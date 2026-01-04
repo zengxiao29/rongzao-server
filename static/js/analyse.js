@@ -998,3 +998,81 @@ async function exportWeeklyReport() {
         alert('导出周报失败: ' + error.message);
     }
 }
+
+// 导出上周周报
+async function exportLastWeekReport() {
+    console.log('===== exportLastWeekReport 开始 =====');
+    
+    try {
+        // 计算当前自然周（周日到周六）
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0=周日, 1=周一, ..., 6=周六
+        
+        // 计算本周日
+        const thisSunday = new Date(today);
+        thisSunday.setDate(today.getDate() - dayOfWeek);
+        
+        // 计算上周日（本周日往前推7天）
+        const lastSunday = new Date(thisSunday);
+        lastSunday.setDate(thisSunday.getDate() - 7);
+        
+        // 计算上周六（上周日往后推6天）
+        const lastSaturday = new Date(lastSunday);
+        lastSaturday.setDate(lastSunday.getDate() + 6);
+        
+        // 格式化日期为 YYYY-MM-DD
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        
+        const startDate = formatDate(lastSunday);
+        const endDate = formatDate(lastSaturday);
+        
+        console.log('导出上周周报日期范围:', startDate, '到', endDate);
+        
+        // 调用后端API生成PDF
+        const response = await fetch('/api/analyse/export-weekly-report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                startDate: startDate,
+                endDate: endDate
+            })
+        });
+        
+        if (response.ok) {
+            // 获取PDF文件
+            const blob = await response.blob();
+            
+            // 创建下载链接
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            // 生成文件名：周报_YYYY-MM-DD_YYYY-MM-DD.pdf
+            a.download = `周报_${startDate}_${endDate}.pdf`;
+            
+            // 触发下载
+            document.body.appendChild(a);
+            a.click();
+            
+            // 清理
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            console.log('===== exportLastWeekReport 完成 =====');
+        } else {
+            const data = await response.json();
+            alert('导出上周周报失败: ' + data.error);
+            console.error('导出上周周报失败:', data.error);
+        }
+    } catch (error) {
+        console.error('导出上周周报失败:', error);
+        alert('导出上周周报失败: ' + error.message);
+    }
+}

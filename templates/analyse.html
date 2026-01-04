@@ -577,7 +577,10 @@
                 <div class="date-filter-section" id="dateFilterSection" style="display: none;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <h3 style="margin: 0;">统计时间范围</h3>
-                        <button class="action-button add-button" onclick="exportWeeklyReport()">导出周报</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="action-button add-button" onclick="exportWeeklyReport()">导出周报</button>
+                            <button class="action-button add-button" onclick="exportLastWeekReport()">导出上周周报</button>
+                        </div>
                     </div>
                     <div class="date-picker-container">
                         <div class="date-picker-wrapper horizontal">
