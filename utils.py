@@ -23,6 +23,12 @@ def register_chinese_font():
     """注册中文字体，返回字体名称"""
     font_name = 'Helvetica'  # 默认字体
     font_paths = [
+        # Linux 系统字体
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
+        '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+        '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+        # macOS 系统字体
         '/System/Library/Fonts/PingFang.ttc',
         '/System/Library/Fonts/STHeiti Light.ttc',
         '/System/Library/Fonts/STHeiti Medium.ttc',
