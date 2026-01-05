@@ -28,16 +28,6 @@ function initAnalyseCommon(callbacks = {}) {
 }
 
 /**
- * 从数据库加载 Tab 配置（已废弃，不再使用）
- * Tab 配置现在直接从 /api/analyse/data 返回的数据中获取
- */
-async function loadTabConfig() {
-    // 不再需要单独加载 Tab 配置
-    // Tab 列表现在从 loadDataFromDb 返回的数据中获取
-    return;
-}
-
-/**
  * 更新 Tab 配置（从后端返回的数据中提取）
  */
 function updateTabsConfig(tabs) {
@@ -110,14 +100,6 @@ async function loadDataFromDb(showUnmatchedAlert = false) {
         console.error('加载数据失败:', error);
         alert('加载数据失败: ' + error.message);
     }
-}
-
-/**
- * 显示未匹配商品的弹窗提示
- */
-function showUnmatchedProductsAlert(unmatchedProducts) {
-    const message = `以下商品名称未在ProductInfo表中找到匹配的映射规则：\n\n${unmatchedProducts.join('\n')}\n\n请在ProductInfo表中添加对应的mapped_title字段。`;
-    alert(message);
 }
 
 /**
