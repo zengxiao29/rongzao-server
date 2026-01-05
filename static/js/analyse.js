@@ -21,9 +21,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 设置文件上传
     setupFileUpload();
 
-    // 加载 Tab 配置
-    await loadTabConfig();
-
     // 加载可用的日期
     await loadAvailableDates();
 

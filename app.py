@@ -9,6 +9,7 @@ from api.upload import register_upload_routes
 from api.stats import register_stats_routes
 from api.export import register_export_routes
 from api.metabase import register_metabase_routes
+from api.product_manage import register_product_manage_routes
 
 app = Flask(__name__)
 
@@ -21,6 +22,7 @@ register_upload_routes(app)
 register_stats_routes(app)
 register_export_routes(app)
 register_metabase_routes(app)
+register_product_manage_routes(app)
 
 if __name__ == '__main__':
     # 检查是否为服务器环境（通过 .ecs 文件判断）

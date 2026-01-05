@@ -35,10 +35,10 @@ def register_routes(app):
         """数据分析页面"""
         return render_template('analyse.html')
 
-    @app.route('/mobile-analyse')
-    def mobile_analyse():
-        """移动端数据分析页面"""
-        return render_template('mobile_analyse.html')
+    @app.route('/product_manage')
+    def product_manage():
+        """商品管理页面"""
+        return render_template('product_manage.html')
 
     @app.route('/<path:filename>')
     def serve_static_file(filename):

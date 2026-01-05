@@ -1,6 +1,6 @@
 /**
  * 数据分析页面公共业务逻辑
- * 供 analyse.js 和 mobile_analyse.js 共享使用
+ * 供 analyse.js 使用
  */
 
 // 全局变量
@@ -28,28 +28,29 @@ function initAnalyseCommon(callbacks = {}) {
 }
 
 /**
- * 从数据库加载 Tab 配置
+ * 从数据库加载 Tab 配置（已废弃，不再使用）
+ * Tab 配置现在直接从 /api/analyse/data 返回的数据中获取
  */
 async function loadTabConfig() {
-    try {
-        const response = await fetch('/api/analyse/config');
-        const data = await response.json();
+    // 不再需要单独加载 Tab 配置
+    // Tab 列表现在从 loadDataFromDb 返回的数据中获取
+    return;
+}
 
-        if (response.ok) {
-            tabsConfig = data.tabs || [];
-
-            // 设置默认 Tab
-            if (tabsConfig.length > 0) {
-                currentTab = tabsConfig[0].name;
-            }
-
-            // 调用回调
-            if (onTabsLoaded) {
-                onTabsLoaded(tabsConfig);
-            }
+/**
+ * 更新 Tab 配置（从后端返回的数据中提取）
+ */
+function updateTabsConfig(tabs) {
+    if (tabs && tabs.length > 0) {
+        tabsConfig = tabs;
+        // 设置默认 Tab（如果当前 Tab 不在列表中，使用第一个）
+        if (!tabsConfig.find(tab => tab.name === currentTab)) {
+            currentTab = tabsConfig[0].name;
         }
-    } catch (error) {
-        console.error('加载 Tab 配置失败:', error);
+        // 调用回调
+        if (onTabsLoaded) {
+            onTabsLoaded(tabsConfig);
+        }
     }
 }
 
@@ -89,6 +90,9 @@ async function loadDataFromDb(showUnmatchedAlert = false) {
 
         if (response.ok) {
             window.tabData = data.tabs;
+
+            // 更新 Tab 配置（从后端返回的数据中提取）
+            updateTabsConfig(data.tabs);
 
             // 调用回调
             if (onDataLoaded) {
