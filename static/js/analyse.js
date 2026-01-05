@@ -8,6 +8,10 @@ let editingTab = null;
 let currentDatePicker = null;
 let currentMonth = new Date();
 
+// 排序状态
+let currentSortColumn = -1;
+let currentSortDirection = 'desc'; // 'asc' 或 'desc'
+
 // 初始化
 document.addEventListener('DOMContentLoaded', async function() {
     // 初始化公共逻辑
@@ -217,23 +221,23 @@ function renderPCTable(data, container) {
                         <th>商品类型</th>
                         <th>
                             有效订购数
-                            <button class="sort-btn" onclick="sortTable(1, 'valid_orders')">▼</button>
+                            <button class="sort-btn" data-column="1" onclick="sortTable(1)">▼</button>
                         </th>
                         <th>
                             抖音
-                            <button class="sort-btn" onclick="sortTable(2, 'douyin_orders')">▼</button>
+                            <button class="sort-btn" data-column="2" onclick="sortTable(2)">▼</button>
                         </th>
                         <th>
                             天猫
-                            <button class="sort-btn" onclick="sortTable(3, 'tmall_orders')">▼</button>
+                            <button class="sort-btn" data-column="3" onclick="sortTable(3)">▼</button>
                         </th>
                         <th>
                             有赞
-                            <button class="sort-btn" onclick="sortTable(4, 'youzan_orders')">▼</button>
+                            <button class="sort-btn" data-column="4" onclick="sortTable(4)">▼</button>
                         </th>
                         <th>
                             让利后金额
-                            <button class="sort-btn" onclick="sortTable(5, 'discount_amount')">▼</button>
+                            <button class="sort-btn" data-column="5" onclick="sortTable(5)">▼</button>
                         </th>
                     </tr>
                 </thead>
@@ -277,9 +281,17 @@ function renderPCTable(data, container) {
 /**
  * 表格排序函数
  * @param {number} columnIndex - 列索引（0开始）
- * @param {string} dataKey - 数据字段名
  */
-function sortTable(columnIndex, dataKey) {
+function sortTable(columnIndex) {
+    // 如果点击的是同一列，切换排序方向
+    if (currentSortColumn === columnIndex) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        // 点击新列，默认降序
+        currentSortColumn = columnIndex;
+        currentSortDirection = 'desc';
+    }
+
     const tableBody = document.getElementById('tableBody');
     const allRows = Array.from(tableBody.querySelectorAll('tr'));
 
@@ -289,9 +301,14 @@ function sortTable(columnIndex, dataKey) {
 
     // 对数据行进行排序
     dataRows.sort((a, b) => {
-        const aValue = parseFloat(a.cells[columnIndex].textContent);
-        const bValue = parseFloat(b.cells[columnIndex].textContent);
-        return bValue - aValue; // 降序排列
+        const aValue = parseFloat(a.cells[columnIndex].textContent.replace(/[¥,]/g, ''));
+        const bValue = parseFloat(b.cells[columnIndex].textContent.replace(/[¥,]/g, ''));
+        
+        if (currentSortDirection === 'asc') {
+            return aValue - bValue;
+        } else {
+            return bValue - aValue;
+        }
     });
 
     // 清空表格内容
@@ -306,6 +323,26 @@ function sortTable(columnIndex, dataKey) {
     if (totalRow) {
         tableBody.appendChild(totalRow);
     }
+
+    // 更新所有排序按钮的显示
+    updateSortButtons();
+}
+
+/**
+ * 更新排序按钮的显示
+ */
+function updateSortButtons() {
+    const buttons = document.querySelectorAll('.sort-btn');
+    buttons.forEach(btn => {
+        const column = parseInt(btn.dataset.column);
+        if (column === currentSortColumn) {
+            btn.textContent = currentSortDirection === 'asc' ? '▲' : '▼';
+            btn.classList.add('active');
+        } else {
+            btn.textContent = '▼';
+            btn.classList.remove('active');
+        }
+    });
 }
 
 /**

@@ -56,6 +56,40 @@
             border-radius: 8px;
         }
 
+        .filter-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: #f0f0f0;
+            border-radius: 8px;
+        }
+
+        .filter-label {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .filter-checkboxes {
+            display: flex;
+            gap: 20px;
+        }
+
+        .filter-checkbox {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            margin-right: 6px;
+            cursor: pointer;
+        }
+
         .search-input {
             flex: 1;
             padding: 10px 15px;
@@ -68,6 +102,35 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-column-selector {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 0 15px;
+            border-left: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+            background: #f8f9ff;
+        }
+
+        .column-selector-label {
+            font-weight: bold;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .column-radio {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .column-radio input[type="radio"] {
+            margin-right: 6px;
+            cursor: pointer;
         }
 
         .search-button {
@@ -100,6 +163,29 @@
         .data-table thead {
             background: #667eea;
             color: white;
+        }
+
+        .sort-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+            font-weight: normal;
+        }
+
+        .sort-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .sort-btn.active {
+            color: white;
+            font-weight: bold;
         }
 
         .data-table th,
@@ -174,6 +260,42 @@
             margin-top: 10px;
             font-size: 16px;
         }
+
+        /* 可编辑单元格样式 */
+        .editable {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .editable:hover {
+            background: #f0f0f0;
+        }
+
+        .editable::after {
+            content: '✎';
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ccc;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .editable:hover::after {
+            opacity: 1;
+        }
+
+        /* 编辑态样式 */
+        .editing {
+            background: #fff3cd !important;
+        }
+
+        .editing input,
+        .editing select {
+            background: white;
+        }
     </style>
 </head>
 <body>
@@ -184,8 +306,46 @@
         </div>
 
         <div class="search-section">
-            <input type="text" class="search-input" id="searchInput" placeholder="输入商品名称进行搜索..." />
+            <input type="text" class="search-input" id="includeInput" placeholder="包含关键词..." />
+            <input type="text" class="search-input" id="excludeInput" placeholder="不包含关键词..." />
+            <div class="search-column-selector">
+                <span class="column-selector-label">搜索范围：</span>
+                <label class="column-radio">
+                    <input type="radio" name="searchColumn" value="name" checked>
+                    <span>商品名称</span>
+                </label>
+                <label class="column-radio">
+                    <input type="radio" name="searchColumn" value="alias">
+                    <span>别名</span>
+                </label>
+                <label class="column-radio">
+                    <input type="radio" name="searchColumn" value="category">
+                    <span>分类</span>
+                </label>
+                <label class="column-radio">
+                    <input type="radio" name="searchColumn" value="mapped_title">
+                    <span>映射标题</span>
+                </label>
+            </div>
             <button class="search-button" onclick="searchProducts()">搜索</button>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-label">筛选条件：</div>
+            <div class="filter-checkboxes">
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filterNoAlias" onchange="handleFilterChange()">
+                    <span>未设置别名</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filterNoCategory" onchange="handleFilterChange()">
+                    <span>未设置分类</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filterNoMapping" onchange="handleFilterChange()">
+                    <span>未设置映射</span>
+                </label>
+            </div>
         </div>
 
         <div class="table-container">
@@ -193,11 +353,22 @@
                 <thead>
                     <tr>
                         <th>商品编码</th>
-                        <th>商品名称</th>
-                        <th>别名</th>
-                        <th>分类</th>
-                        <th>映射标题</th>
-                        <th>审核状态</th>
+                        <th>
+                            商品名称
+                            <button class="sort-btn" data-column="1" onclick="sortProductTable(1)">▼</button>
+                        </th>
+                        <th>
+                            别名
+                            <button class="sort-btn" data-column="2" onclick="sortProductTable(2)">▼</button>
+                        </th>
+                        <th>
+                            分类
+                            <button class="sort-btn" data-column="3" onclick="sortProductTable(3)">▼</button>
+                        </th>
+                        <th>
+                            映射标题
+                            <button class="sort-btn" data-column="4" onclick="sortProductTable(4)">▼</button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
