@@ -49,7 +49,26 @@ function updateTabsConfig(tabs) {
  */
 async function loadAvailableDates() {
     try {
-        const response = await fetch('/api/analyse/dates');
+        const token = getToken();
+        const headers = {};
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch('/api/analyse/dates', { headers: headers });
+
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
+
         const data = await response.json();
 
         if (response.ok && data.dates) {
@@ -66,16 +85,35 @@ async function loadAvailableDates() {
  */
 async function loadDataFromDb(showUnmatchedAlert = false) {
     try {
+        const token = getToken();
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/analyse/data', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify({
                 startDate: selectedStartDate,
                 endDate: selectedEndDate
             })
         });
+
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
+        
         const data = await response.json();
 
         if (response.ok) {
@@ -203,22 +241,56 @@ async function setCurrentWeek() {
  * 导出周报
  */
 async function exportWeeklyReport() {
-    if (!selectedStartDate || !selectedEndDate) {
-        alert('请先选择日期范围');
-        return;
+    // 自动设置为当前周（周日到周六）
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - dayOfWeek);
+
+    const saturday = new Date(sunday);
+    saturday.setDate(sunday.getDate() + 6);
+
+    selectedStartDate = formatDate(sunday);
+    selectedEndDate = formatDate(saturday);
+
+    document.getElementById('startDate').value = selectedStartDate;
+    document.getElementById('endDate').value = selectedEndDate;
+
+    // 调用回调
+    if (onDateChanged) {
+        onDateChanged(selectedStartDate, selectedEndDate);
     }
 
     try {
+        const token = getToken();
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/analyse/export-weekly-report', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify({
                 startDate: selectedStartDate,
                 endDate: selectedEndDate
             })
         });
+
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
 
         if (response.ok) {
             const blob = await response.blob();

@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
-from flask import jsonify, request
+from flask import jsonify, request, g
 from database import get_db_connection
+from utils.auth import token_required, role_required
+from utils.operation_logger import log_operation
 
 
 def register_product_manage_routes(app):
     """注册商品管理相关 API 路由"""
 
     @app.route('/api/product-manage/search', methods=['GET'])
+    @token_required
+    @role_required('admin')
     def search_products():
         """搜索商品"""
         try:
@@ -153,6 +157,8 @@ def register_product_manage_routes(app):
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/product-manage/categories', methods=['GET'])
+    @token_required
+    @role_required('admin')
     def get_categories():
         """获取所有分类列表"""
         try:
@@ -186,6 +192,8 @@ def register_product_manage_routes(app):
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/product-manage/update', methods=['POST'])
+    @token_required
+    @role_required('admin')
     def update_product():
         """更新商品信息"""
         try:
@@ -201,6 +209,22 @@ def register_product_manage_routes(app):
             cursor = conn.cursor()
 
             try:
+                # 获取旧值用于日志记录
+                cursor.execute('SELECT name, alias, category, mapped_title FROM ProductInfo WHERE id = ?', (product_id,))
+                product = cursor.fetchone()
+                
+                if not product:
+                    return jsonify({'error': '商品不存在'}), 404
+                
+                # 根据字段类型获取旧值
+                old_value = None
+                if field == 'alias':
+                    old_value = product['alias']
+                elif field == 'mapped_title':
+                    old_value = product['mapped_title']
+                elif field == 'category':
+                    old_value = product['category']
+                
                 # 根据字段类型更新
                 if field == 'alias':
                     # 如果值为空，设置为 NULL
@@ -228,6 +252,21 @@ def register_product_manage_routes(app):
 
                 conn.commit()
 
+                # 记录操作日志
+                log_operation(
+                    username=g.current_user['username'],
+                    role=g.current_user['role'],
+                    operation_type=f'update_product_{field}',
+                    detail={
+                        'product_id': product_id,
+                        'product_name': product['name'],
+                        'field': field,
+                        'old_value': old_value,
+                        'new_value': value
+                    },
+                    result='success'
+                )
+
                 return jsonify({
                     'success': True,
                     'message': '更新成功'
@@ -240,4 +279,19 @@ def register_product_manage_routes(app):
             print(f'更新商品信息失败: {str(e)}')
             import traceback
             traceback.print_exc()
+            
+            # 记录失败日志
+            log_operation(
+                username=g.current_user['username'],
+                role=g.current_user['role'],
+                operation_type=f'update_product_{field}',
+                detail={
+                    'product_id': product_id,
+                    'field': field,
+                    'value': value
+                },
+                result='failed',
+                error_message=str(e)
+            )
+            
             return jsonify({'error': str(e)}), 500

@@ -10,6 +10,11 @@ def register_routes(app):
         """首页"""
         return render_template('index.html')
 
+    @app.route('/login')
+    def login():
+        """登录页面"""
+        return render_template('login.html')
+
     @app.route('/data-analysis')
     def data_analysis():
         """数据分析页面"""

@@ -4,12 +4,14 @@ import os
 import pandas as pd
 from flask import jsonify, request
 from database import get_db_connection
+from utils.auth import token_required
 
 
 def register_analyse_routes(app):
     """注册数据分析相关 API 路由"""
 
     @app.route('/api/analyse/data', methods=['GET', 'POST'])
+    @token_required
     def get_analyse_data():
         """从数据库获取分析数据"""
         print('收到数据分析请求')
@@ -42,7 +44,7 @@ def register_analyse_routes(app):
                 print(f'读取到 {len(product_mapping)} 条商品映射规则')
 
                 # 构建SQL查询
-                sql = 'SELECT * FROM OrderDetails WHERE 1=1'
+                sql = 'SELECT * FROM OrderDetails WHERE 付款时间 IS NOT NULL AND 付款时间 != "NaT"'
                 params = []
 
                 if start_date:

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 import re
-from flask import jsonify, request
+from flask import jsonify, request, g
 from database import get_db_connection, calculate_record_hash
+from utils.auth import token_required
+from utils.operation_logger import log_operation
 
 
 def register_upload_routes(app):
@@ -66,6 +68,7 @@ def register_upload_routes(app):
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/db/upload', methods=['POST'])
+    @token_required
     def upload_to_database():
         """上传Excel数据到数据库"""
         print('收到数据库上传请求')
@@ -82,11 +85,41 @@ def register_upload_routes(app):
         print(f'开始处理文件: {file.filename}')
 
         try:
-            return upload_to_database_internal(file)
+            result = upload_to_database_internal(file)
+            
+            # 记录上传日志
+            if result.get('success'):
+                log_operation(
+                    username=g.current_user['username'],
+                    role=g.current_user['role'],
+                    operation_type='upload_excel',
+                    detail={
+                        'filename': file.filename,
+                        'total': result.get('total', 0),
+                        'success_count': result.get('success_count', 0),
+                        'duplicate_count': result.get('duplicate_count', 0),
+                        'error_count': result.get('error_count', 0),
+                        'filtered_count': result.get('filtered_count', 0)
+                    },
+                    result='success'
+                )
+            
+            return result
         except Exception as e:
             print(f'处理文件时出错: {str(e)}')
             import traceback
             traceback.print_exc()
+            
+            # 记录失败日志
+            log_operation(
+                username=g.current_user['username'],
+                role=g.current_user['role'],
+                operation_type='upload_excel',
+                detail={'filename': file.filename},
+                result='failed',
+                error_message=str(e)
+            )
+            
             return jsonify({'error': str(e)}), 500
 
 

@@ -7,6 +7,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
     <style>
+        body {
+            margin: 0;
+            padding: 20px 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
         .tab-container {
             margin-top: 20px;
             border-bottom: 2px solid #667eea;
@@ -312,6 +328,73 @@
 
         .date-picker-modal.show {
             display: flex;
+        }
+
+        /* 上传模态弹层样式 */
+        .upload-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .upload-modal.show {
+            display: flex;
+        }
+
+        .upload-modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .upload-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .upload-modal-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 20px;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-button:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .upload-modal-body {
+            padding: 10px 0;
         }
 
         .date-picker-content {
@@ -712,30 +795,28 @@
             display: none;
         }
     </style>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </head>
 <body>
+    <script>
+        // 检查登录状态
+        if (!requireLogin()) {
+            // requireLogin 会处理跳转
+        }
+    </script>
+
     <div class="container">
-        <div class="header">
-            <a href="{{ url_for('index') }}" class="back-link">← 返回首页</a>
-        </div>
+        <!-- 统一页眉 -->
+        {% include 'header.html' %}
+
         <div class="content">
             <div class="upload-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h2 style="margin: 0;">上传Excel文件到数据库</h2>
+                    <h2 style="margin: 0;">信息管理</h2>
                     <div style="display: flex; gap: 10px;">
-                        <button class="action-button add-button" onclick="toggleUploadArea()" id="toggleUploadBtn">上传</button>
-                        <button class="action-button edit-button" onclick="window.open('/product_manage', '_blank')" style="display: none;">商品管理</button>
+                        <button class="action-button add-button" onclick="openUploadModal()">上传订单excel</button>
+                        <button class="action-button add-button" onclick="window.location.href='/product_manage'" id="productManageBtn" style="display: none;">商品管理</button>
                     </div>
-                </div>
-                <div class="upload-area" id="uploadArea" style="display: none;">
-                    <div class="upload-icon">📁</div>
-                    <p class="upload-text">拖拽Excel文件到此处，或</p>
-                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
-                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">选择文件</button>
-                    <p class="upload-hint">支持 .xlsx 和 .xls 格式</p>
-                </div>
-                <div class="upload-result" id="uploadResult" style="display: none;">
-                    <p id="uploadResultText"></p>
                 </div>
             </div>
 
@@ -799,6 +880,28 @@
             <div class="date-picker-footer">
                 <button class="cancel-btn" onclick="closeDatePicker()">取消</button>
                 <button class="confirm-btn" onclick="confirmDate()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传订单模态弹层 -->
+    <div class="upload-modal" id="uploadModal" style="display: none;">
+        <div class="upload-modal-content">
+            <div class="upload-modal-header">
+                <h2>上传订单Excel</h2>
+                <button class="close-button" onclick="closeUploadModal()">×</button>
+            </div>
+            <div class="upload-modal-body">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p class="upload-text">拖拽Excel文件到此处，或</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">选择文件</button>
+                    <p class="upload-hint">支持 .xlsx 和 .xls 格式</p>
+                </div>
+                <div class="upload-result" id="uploadResult" style="display: none;">
+                    <p id="uploadResultText"></p>
+                </div>
             </div>
         </div>
     </div>

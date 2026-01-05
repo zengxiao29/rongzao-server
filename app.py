@@ -7,6 +7,8 @@ from api.analyse import register_analyse_routes
 from api.upload import register_upload_routes
 from api.export import register_export_routes
 from api.product_manage import register_product_manage_routes
+from api.auth import register_auth_routes
+from database import init_user_table
 
 app = Flask(__name__)
 
@@ -17,8 +19,12 @@ register_analyse_routes(app)
 register_upload_routes(app)
 register_export_routes(app)
 register_product_manage_routes(app)
+register_auth_routes(app)
 
 if __name__ == '__main__':
+    # 初始化用户表
+    init_user_table()
+    
     # 检查是否为服务器环境（通过 .ecs 文件判断）
     is_server = os.path.exists('.ecs')
     

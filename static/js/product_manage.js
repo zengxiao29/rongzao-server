@@ -87,7 +87,29 @@ function handleFilterChange() {
  */
 async function loadProducts() {
     try {
-        const response = await fetch(`/api/product-manage/search?include=${encodeURIComponent(currentIncludeKeyword)}&exclude=${encodeURIComponent(currentExcludeKeyword)}&searchColumn=${searchColumn}&filterNoAlias=${filterNoAlias}&filterNoCategory=${filterNoCategory}&filterNoMapping=${filterNoMapping}&sortColumn=${currentSortColumn}&sortDirection=${currentSortDirection}&page=${currentPage}&pageSize=${pageSize}`);
+        const token = getToken();
+        const headers = {};
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(
+            `/api/product-manage/search?include=${encodeURIComponent(currentIncludeKeyword)}&exclude=${encodeURIComponent(currentExcludeKeyword)}&searchColumn=${searchColumn}&filterNoAlias=${filterNoAlias}&filterNoCategory=${filterNoCategory}&filterNoMapping=${filterNoMapping}&sortColumn=${currentSortColumn}&sortDirection=${currentSortDirection}&page=${currentPage}&pageSize=${pageSize}`,
+            { headers: headers }
+        );
+
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
+        
         const result = await response.json();
 
         if (response.ok && result.success) {
@@ -318,7 +340,26 @@ function renderTextInput(cell, currentValue) {
 async function renderCategorySelect(cell, currentValue) {
     try {
         // 获取所有分类
-        const response = await fetch('/api/product-manage/categories');
+        const token = getToken();
+        const headers = {};
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch('/api/product-manage/categories', { headers: headers });
+
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
+        
         const result = await response.json();
 
         if (!response.ok || !result.success) {
@@ -404,17 +445,35 @@ async function finishEditing() {
 
     // 发送更新请求
     try {
+        const token = getToken();
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/product-manage/update', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify({
                 id: productId,
                 field: field,
                 value: newValue
             })
         });
+        
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
 
         const result = await response.json();
 

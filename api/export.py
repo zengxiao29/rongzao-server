@@ -5,19 +5,22 @@ import pandas as pd
 from io import BytesIO
 from datetime import datetime, timedelta
 from urllib.parse import quote
-from flask import jsonify, request
+from flask import jsonify, request, g
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from database import get_db_connection
-from utils import register_chinese_font
+from utils_common import register_chinese_font
+from utils.auth import token_required
+from utils.operation_logger import log_operation
 
 
 def register_export_routes(app):
     """注册导出相关 API 路由"""
 
     @app.route('/api/analyse/export-weekly-report', methods=['POST'])
+    @token_required
     def export_weekly_report():
         """导出周报PDF"""
         try:
@@ -298,6 +301,20 @@ def register_export_routes(app):
                         'Content-Disposition': f'attachment; filename*=UTF-8\'\'{encoded_filename}'
                     }
                 )
+                
+                # 记录导出日志
+                log_operation(
+                    username=g.current_user['username'],
+                    role=g.current_user['role'],
+                    operation_type='export_weekly_report',
+                    detail={
+                        'start_date': start_date,
+                        'end_date': end_date,
+                        'filename': f'周报_{start_date}_{end_date}.pdf'
+                    },
+                    result='success'
+                )
+                
                 return response
 
             finally:
@@ -307,4 +324,18 @@ def register_export_routes(app):
             print(f'导出周报失败: {str(e)}')
             import traceback
             traceback.print_exc()
+            
+            # 记录失败日志
+            log_operation(
+                username=g.current_user['username'],
+                role=g.current_user['role'],
+                operation_type='export_weekly_report',
+                detail={
+                    'start_date': start_date,
+                    'end_date': end_date
+                },
+                result='failed',
+                error_message=str(e)
+            )
+            
             return jsonify({'error': str(e)}), 500

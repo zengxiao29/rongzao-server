@@ -5,10 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理系统首页</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <style>
+        .page-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .page-title {
+            text-align: center;
+            margin: 30px 0;
+            color: white;
+            font-size: 28px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>管理系统</h1>
+    <script>
+        // 检查登录状态
+        if (!requireLogin()) {
+            // requireLogin 会处理跳转
+        }
+    </script>
+
+    <div class="page-wrapper">
+        <!-- 统一页眉 -->
+        {% include 'header.html' %}
+
+        <h1 class="page-title">管理系统</h1>
         <div class="menu-grid">
             <a href="{{ url_for('analyse') }}" class="menu-item">
                 <div class="menu-icon">📊</div>

@@ -6,6 +6,7 @@
     <title>测试页面</title>
     <script src="{{ url_for('static', filename='js/xlsx.full.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/beautiful-chart.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -34,6 +35,12 @@
     </style>
 </head>
 <body>
+    <script>
+        // 检查登录状态
+        if (!requireLogin()) {
+            // requireLogin 会处理跳转
+        }
+    </script>
     <h1>测试Excel加载和图表渲染</h1>
     <button onclick="loadAndTest()">加载1228.xls并测试</button>
     <div id="log"></div>

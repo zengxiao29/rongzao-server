@@ -14,6 +14,15 @@ let currentSortDirection = 'desc'; // 'asc' 或 'desc'
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async function() {
+    // 检查用户角色，如果是 admin 则显示商品管理按钮
+    const user = getCurrentUser();
+    if (user && user.role === 'admin') {
+        const productManageBtn = document.getElementById('productManageBtn');
+        if (productManageBtn) {
+            productManageBtn.style.display = 'block';
+        }
+    }
+
     // 初始化公共逻辑
     initAnalyseCommon({
         onTabsLoaded: handleTabsLoaded,
@@ -433,22 +442,10 @@ function renderMobileCards(data, container) {
 function setupFileUpload() {
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
-    const toggleUploadBtn = document.getElementById('toggleUploadBtn');
 
-    if (!uploadArea || !fileInput || !toggleUploadBtn) {
+    if (!uploadArea || !fileInput) {
         return;
     }
-
-    // 切换上传区域显示
-    toggleUploadBtn.onclick = function() {
-        if (uploadArea.style.display === 'none') {
-            uploadArea.style.display = 'block';
-            toggleUploadBtn.textContent = '收起';
-        } else {
-            uploadArea.style.display = 'none';
-            toggleUploadBtn.textContent = '上传';
-        }
-    };
 
     // 文件选择
     fileInput.onchange = function(e) {
@@ -488,10 +485,29 @@ async function handleFileUpload(file) {
     formData.append('file', file);
 
     try {
+        const token = getToken();
+        const headers = {};
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('/api/analyse/upload', {
             method: 'POST',
+            headers: headers,
             body: formData
         });
+
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
 
         const result = await response.json();
 
@@ -633,4 +649,22 @@ function toggleUploadArea() {
         uploadArea.style.display = 'none';
         toggleBtn.textContent = '上传';
     }
+}
+
+/**
+ * 打开上传模态弹层
+ */
+function openUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+}
+
+/**
+ * 关闭上传模态弹层
+ */
+function closeUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    modal.style.display = 'none';
+    modal.classList.remove('show');
 }

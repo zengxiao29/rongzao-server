@@ -5,8 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>生产管理</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </head>
 <body>
+    <script>
+        // 检查登录状态
+        if (!requireLogin()) {
+            // requireLogin 会处理跳转
+        }
+    </script>
     <div class="container">
         <div class="header">
             <a href="{{ url_for('index') }}" class="back-link">← 返回首页</a>

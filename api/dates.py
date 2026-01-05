@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 from flask import jsonify
 from database import get_db_connection
+from utils.auth import token_required
 
 
 def register_dates_routes(app):
     """注册日期相关 API 路由"""
 
     @app.route('/api/analyse/dates', methods=['GET'])
+    @token_required
     def get_available_dates():
         """获取数据库中所有可用的付款时间日期"""
         print('收到获取可用日期请求')
