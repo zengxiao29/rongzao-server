@@ -249,10 +249,6 @@ async function requestAuthorization() {
  * 进入编辑模式
  */
 function enterEditMode(cell, productId, field, currentValue) {
-    if (!requestAuthorization()) {
-        return;
-    }
-
     // 如果已经有单元格在编辑，先完成编辑
     if (editingCell) {
         finishEditing();
