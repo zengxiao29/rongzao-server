@@ -238,6 +238,32 @@ async function setCurrentWeek() {
 }
 
 /**
+ * 设置本月
+ */
+async function setCurrentMonth() {
+    const today = new Date();
+
+    // 获取本月第一天
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    // 获取本月最后一天
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    selectedStartDate = formatDate(firstDay);
+    selectedEndDate = formatDate(lastDay);
+
+    document.getElementById('startDate').value = selectedStartDate;
+    document.getElementById('endDate').value = selectedEndDate;
+
+    // 调用回调
+    if (onDateChanged) {
+        onDateChanged(selectedStartDate, selectedEndDate);
+    }
+
+    await loadDataFromDb();
+}
+
+/**
  * 导出周报
  */
 async function exportWeeklyReport() {
@@ -313,35 +339,22 @@ async function exportWeeklyReport() {
 }
 
 /**
- * 导出上周周报
+ * 打开报表页面
  */
-async function exportLastWeekReport() {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-
-    const thisSunday = new Date(today);
-    thisSunday.setDate(today.getDate() - dayOfWeek);
-
-    const lastSunday = new Date(thisSunday);
-    lastSunday.setDate(thisSunday.getDate() - 7);
-
-    const lastSaturday = new Date(lastSunday);
-    lastSaturday.setDate(lastSunday.getDate() + 6);
-
-    selectedStartDate = formatDate(lastSunday);
-    selectedEndDate = formatDate(lastSaturday);
-
-    document.getElementById('startDate').value = selectedStartDate;
-    document.getElementById('endDate').value = selectedEndDate;
-
-    // 调用回调
-    if (onDateChanged) {
-        onDateChanged(selectedStartDate, selectedEndDate);
+function openReportPage() {
+    if (!selectedStartDate || !selectedEndDate) {
+        alert('请先选择日期范围');
+        return;
     }
 
-    await exportWeeklyReport();
+    // 在新窗口打开报表页面
+    const reportUrl = `/report?startDate=${selectedStartDate}&endDate=${selectedEndDate}`;
+    window.open(reportUrl, '_blank');
 }
 
+/**
+ * 导出上周周报
+ */
 /**
  * 格式化日期为 YYYY-MM-DD
  * @param {Date} date - 日期对象

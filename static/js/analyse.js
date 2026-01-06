@@ -668,3 +668,21 @@ function closeUploadModal() {
     modal.style.display = 'none';
     modal.classList.remove('show');
 }
+
+/**
+ * 打开库存上传模态弹层
+ */
+function openInventoryUploadModal() {
+    const modal = document.getElementById('inventoryUploadModal');
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+}
+
+/**
+ * 关闭库存上传模态弹层
+ */
+function closeInventoryUploadModal() {
+    const modal = document.getElementById('inventoryUploadModal');
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+}

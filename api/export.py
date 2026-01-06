@@ -80,12 +80,14 @@ def register_export_routes(app):
                 # 提取日期部分
                 df['日期'] = pd.to_datetime(df['付款时间']).dt.strftime('%m月%d日')
 
-                # 生成一周7天的日期列表
+                # 生成日期列表（支持任意日期范围）
                 start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-                week_dates = []
-                for i in range(7):
-                    date = start_dt + timedelta(days=i)
-                    week_dates.append(date.strftime('%m月%d日'))
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                date_list = []
+                current_date = start_dt
+                while current_date <= end_dt:
+                    date_list.append(current_date.strftime('%m月%d日'))
+                    current_date += timedelta(days=1)
 
                 # 按商品类型统计（使用ProductInfo进行映射）
                 type_stats = {}
@@ -99,21 +101,22 @@ def register_export_routes(app):
 
                     tab_stats[category_name] = {
                         'types': [],
-                        'daily': {date: {'quantity': 0, 'amount': 0.0} for date in week_dates},
+                        'daily': {date: {'quantity': 0, 'amount': 0.0} for date in date_list},
                         'total': {'quantity': 0, 'amount': 0.0}
                     }
 
                 # 初始化每一天是否有数据
-                for week_date in week_dates:
-                    daily_has_data[week_date] = False
+                for date_str in date_list:
+                    daily_has_data[date_str] = False
 
                 # 遍历每条订单记录
                 for idx, row in df.iterrows():
                     product_name = row['商品名称']
-                    week_date = row['日期']
+                    date_str = row['日期']
 
                     # 标记这一天有数据
-                    daily_has_data[week_date] = True
+                    if date_str in daily_has_data:
+                        daily_has_data[date_str] = True
 
                     # 查找商品映射
                     product_info = product_full_mapping.get(product_name)
@@ -138,7 +141,7 @@ def register_export_routes(app):
                     if mapped_title not in type_stats:
                         type_stats[mapped_title] = {
                             'tab_name': category_name,
-                            'daily': {date: {'quantity': 0, 'amount': 0.0} for date in week_dates},
+                            'daily': {date: {'quantity': 0, 'amount': 0.0} for date in date_list},
                             'total': {'quantity': 0, 'amount': 0.0}
                         }
 
@@ -151,22 +154,29 @@ def register_export_routes(app):
                     amount = float(row['金额']) if pd.notna(row['金额']) else 0
 
                     # 更新商品类型统计数据
-                    type_stats[mapped_title]['daily'][week_date]['quantity'] += quantity
-                    type_stats[mapped_title]['daily'][week_date]['amount'] += amount
+                    if date_str in type_stats[mapped_title]['daily']:
+                        type_stats[mapped_title]['daily'][date_str]['quantity'] += quantity
+                        type_stats[mapped_title]['daily'][date_str]['amount'] += amount
                     type_stats[mapped_title]['total']['quantity'] += quantity
                     type_stats[mapped_title]['total']['amount'] += amount
 
                     # 更新tab统计数据
-                    tab_stats[category_name]['daily'][week_date]['quantity'] += quantity
-                    tab_stats[category_name]['daily'][week_date]['amount'] += amount
+                    if date_str in tab_stats[category_name]['daily']:
+                        tab_stats[category_name]['daily'][date_str]['quantity'] += quantity
+                        tab_stats[category_name]['daily'][date_str]['amount'] += amount
                     tab_stats[category_name]['total']['quantity'] += quantity
                     tab_stats[category_name]['total']['amount'] += amount
 
                 # 准备PDF数据
                 pdf_data = []
 
-                # 计算周数
-                title_week = f"{start_dt.month}月第{(start_dt.day - 1) // 7 + 1}周"
+                # 计算标题（支持任意日期范围）
+                if len(date_list) == 7:
+                    # 如果是7天，使用周数格式
+                    title_week = f"{start_dt.month}月第{(start_dt.day - 1) // 7 + 1}周"
+                else:
+                    # 否则使用日期范围格式
+                    title_week = f"{start_dt.month}月{start_dt.day}日 - {end_dt.month}月{end_dt.day}日"
 
                 # 添加标题行
                 pdf_data.append([title_week, '', '', ''])
@@ -184,28 +194,28 @@ def register_export_routes(app):
                     for product_type in tab_stats[category_name]['types']:
                         type_data = type_stats[product_type]
 
-                        # 遍历一周7天
-                        for week_date in week_dates:
-                            quantity = type_data['daily'][week_date]['quantity']
-                            amount = type_data['daily'][week_date]['amount']
+                        # 遍历所有日期
+                        for date_str in date_list:
+                            quantity = type_data['daily'][date_str]['quantity']
+                            amount = type_data['daily'][date_str]['amount']
 
                             # 如果这一天有数据但该商品没有交易，显示0；如果这一天完全没有数据，留空
-                            if daily_has_data[week_date]:
+                            if daily_has_data[date_str]:
                                 pdf_data.append([
                                     product_type,
-                                    week_date,
+                                    date_str,
                                     quantity if quantity > 0 else '0',
                                     f"{amount:.2f}" if amount > 0 else '0.00'
                                 ])
                             else:
                                 pdf_data.append([
                                     product_type,
-                                    week_date,
+                                    date_str,
                                     '',
                                     ''
                                 ])
 
-                        # 添加该商品类型的合计行（7天总和）
+                        # 添加该商品类型的合计行（所有日期总和）
                         pdf_data.append([
                             '',
                             '合计',
@@ -269,13 +279,14 @@ def register_export_routes(app):
 
                     # 遍历该tab下的所有商品类型
                     for product_type in tab_stats[category_name]['types']:
-                        # 合并该商品类型的商品类型列（7天数据）
-                        styles.append(('SPAN', (0, base_row), (0, base_row + 6)))
+                        # 合并该商品类型的商品类型列（所有日期数据）
+                        num_dates = len(date_list)
+                        styles.append(('SPAN', (0, base_row), (0, base_row + num_dates - 1)))
 
-                        # 商品类型合计行（第8行），添加灰色背景
-                        styles.append(('BACKGROUND', (0, base_row + 7), (-1, base_row + 7), colors.lightgrey))
+                        # 商品类型合计行，添加灰色背景
+                        styles.append(('BACKGROUND', (0, base_row + num_dates), (-1, base_row + num_dates), colors.lightgrey))
 
-                        base_row += 8  # 7天数据 + 1行合计 = 8行
+                        base_row += num_dates + 1  # 所有日期数据 + 1行合计
 
                     # tab合计行，添加绿色背景
                     styles.append(('BACKGROUND', (0, base_row), (-1, base_row), colors.lightgreen))

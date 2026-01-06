@@ -8,6 +8,7 @@ from api.upload import register_upload_routes
 from api.export import register_export_routes
 from api.product_manage import register_product_manage_routes
 from api.auth import register_auth_routes
+from api.report import register_report_routes
 from database import init_user_table
 
 app = Flask(__name__)
@@ -20,6 +21,7 @@ register_upload_routes(app)
 register_export_routes(app)
 register_product_manage_routes(app)
 register_auth_routes(app)
+register_report_routes(app)
 
 if __name__ == '__main__':
     # 初始化用户表

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报表</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .report-title {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .action-button:hover {
+            background: #5568d3;
+        }
+
+        .date-info {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .report-table-container {
+            overflow-x: auto;
+        }
+
+        .report-table {
+            width: auto;
+            min-width: 800px;
+            border-collapse: collapse;
+            background: white;
+            margin: 0 auto;
+        }
+
+        .report-table thead {
+            background: #667eea;
+            color: white;
+        }
+
+        .report-table th,
+        .report-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+        }
+
+        .report-table td:first-child {
+            text-align: center;
+        }
+
+        .report-table tbody tr:nth-child(even) {
+            background: #f8f9ff;
+        }
+
+        .report-table tbody tr:nth-child(odd) {
+            background: white;
+        }
+
+        .report-table .title-row {
+            background: #e0f7fa !important;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .report-table .subtitle-row {
+            background: #e0f7fa !important;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .report-table .header-row {
+            background: #667eea !important;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .report-table .subtotal-row {
+            background: #f0f0f0 !important;
+            font-weight: bold;
+        }
+
+        .report-table .total-row {
+            background: #e8f5e9 !important;
+            font-weight: bold;
+        }
+
+        .report-table td.text-right {
+            text-align: right;
+        }
+
+        .report-table td.text-center {
+            text-align: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="report-header">
+            <h1 class="report-title">报表</h1>
+            <div class="report-actions">
+                <button class="action-button" onclick="exportToPDF()">导出PDF</button>
+                <button class="action-button" onclick="window.close()">关闭</button>
+            </div>
+        </div>
+
+        <div class="date-info" id="dateInfo"></div>
+
+        <div id="loading" class="loading">加载中...</div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <div id="reportContent" class="report-table-container" style="display: none;">
+            <table class="report-table" id="reportTable">
+                <!-- 表格内容将由 JavaScript 动态生成 -->
+            </table>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/report.js') }}"></script>
+</body>
+</html>

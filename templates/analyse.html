@@ -237,6 +237,8 @@
             flex-wrap: wrap;
             gap: 15px;
             align-items: flex-end;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .date-picker-wrapper {
@@ -304,6 +306,10 @@
         .quick-date-btn:hover {
             background: #667eea;
             color: white;
+        }
+
+        .quick-date-btn-right {
+            margin-left: auto;
         }
 
         .date-picker-actions {
@@ -810,26 +816,15 @@
         {% include 'header.html' %}
 
         <div class="content">
-            <div class="upload-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h2 style="margin: 0;">信息管理</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="action-button add-button" onclick="openUploadModal()">上传订单excel</button>
-                        <button class="action-button add-button" onclick="window.location.href='/product_manage'" id="productManageBtn" style="display: none;">商品管理</button>
-                    </div>
-                </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button class="action-button add-button" onclick="openUploadModal()">上传订单</button>
+                <button class="action-button add-button" onclick="openInventoryUploadModal()">上传库存</button>
+                <button class="action-button add-button" onclick="window.location.href='/product_manage'" id="productManageBtn" style="display: block;">商品管理</button>
             </div>
 
             <div class="upload-section">
                 <!-- 日期选择区域 -->
                 <div class="date-filter-section" id="dateFilterSection" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 style="margin: 0;">统计时间范围</h3>
-                        <div style="display: flex; gap: 10px;">
-                            <button class="action-button add-button" onclick="exportWeeklyReport()">导出周报</button>
-                            <button class="action-button add-button" onclick="exportLastWeekReport()">导出上周周报</button>
-                        </div>
-                    </div>
                     <div class="date-picker-container">
                         <div class="date-picker-wrapper horizontal">
                             <label>开始日期：</label>
@@ -843,8 +838,10 @@
                         <div class="quick-date-buttons">
                             <button class="quick-date-btn" onclick="setQuickDateRange(7)">最近7天</button>
                             <button class="quick-date-btn" onclick="setQuickDateRange(30)">最近30天</button>
-                            <button class="quick-date-btn" onclick="setCurrentWeek()">当前周</button>
+                            <button class="quick-date-btn" onclick="setCurrentWeek()">本周</button>
+                            <button class="quick-date-btn" onclick="setCurrentMonth()">本月</button>
                         </div>
+                        <button class="action-button add-button" onclick="openReportPage()">日数据报表</button>
                     </div>
                 </div>
             </div>
@@ -901,6 +898,28 @@
                 </div>
                 <div class="upload-result" id="uploadResult" style="display: none;">
                     <p id="uploadResultText"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 上传库存模态弹层 -->
+    <div class="upload-modal" id="inventoryUploadModal" style="display: none;">
+        <div class="upload-modal-content">
+            <div class="upload-modal-header">
+                <h2>上传库存Excel</h2>
+                <button class="close-button" onclick="closeInventoryUploadModal()">×</button>
+            </div>
+            <div class="upload-modal-body">
+                <div class="upload-area" id="inventoryUploadArea">
+                    <div class="upload-icon">📦</div>
+                    <p class="upload-text">拖拽Excel文件到此处，或</p>
+                    <input type="file" id="inventoryFileInput" accept=".xlsx,.xls" style="display: none;">
+                    <button class="upload-btn" onclick="document.getElementById('inventoryFileInput').click()">选择文件</button>
+                    <p class="upload-hint">支持 .xlsx 和 .xls 格式</p>
+                </div>
+                <div class="upload-result" id="inventoryUploadResult" style="display: none;">
+                    <p id="inventoryUploadResultText"></p>
                 </div>
             </div>
         </div>

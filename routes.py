@@ -45,6 +45,11 @@ def register_routes(app):
         """商品管理页面"""
         return render_template('product_manage.html')
 
+    @app.route('/report')
+    def report():
+        """报表页面"""
+        return render_template('report.html')
+
     @app.route('/<path:filename>')
     def serve_static_file(filename):
         """提供静态文件服务"""
