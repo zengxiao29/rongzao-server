@@ -77,26 +77,50 @@
 
         .report-table {
             width: auto;
-            min-width: 800px;
+            min-width: 720px;
+            max-width: 1000px;
             border-collapse: collapse;
             background: white;
             margin: 0 auto;
+            table-layout: fixed;
+        }
+
+        .report-table th,
+        .report-table td {
+            padding: 12px 8px;
+            border: 1px solid #e0e0e0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .report-table th:first-child,
+        .report-table td:first-child {
+            text-align: center;
+            width: 35%;
+        }
+
+        .report-table th:nth-child(2),
+        .report-table td:nth-child(2) {
+            text-align: center;
+            width: 20%;
+        }
+
+        .report-table th:nth-child(3),
+        .report-table td:nth-child(3) {
+            text-align: right;
+            width: 15%;
+        }
+
+        .report-table th:nth-child(4),
+        .report-table td:nth-child(4) {
+            text-align: right;
+            width: 30%;
         }
 
         .report-table thead {
             background: #667eea;
             color: white;
-        }
-
-        .report-table th,
-        .report-table td {
-            padding: 12px;
-            text-align: left;
-            border: 1px solid #e0e0e0;
-        }
-
-        .report-table td:first-child {
-            text-align: center;
         }
 
         .report-table tbody tr:nth-child(even) {
@@ -156,6 +180,165 @@
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px 0;
+                margin: 0;
+            }
+
+            .container {
+                padding: 15px 10px;
+                border-radius: 5px;
+                max-width: 100%;
+                width: 100%;
+                margin: 0 auto;
+            }
+
+            .report-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+            .report-title {
+                font-size: 20px;
+            }
+
+            .report-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .action-button {
+                flex: 1;
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .date-info {
+                font-size: 13px;
+            }
+
+            .report-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            .report-table {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                font-size: 12px;
+            }
+
+            .report-table th,
+            .report-table td {
+                padding: 6px 3px;
+            }
+
+            /* 手机端列宽策略：压缩后三列，给商品类型更多空间 */
+            .report-table th:first-child,
+            .report-table td:first-child {
+                width: 45% !important;
+            }
+
+            .report-table th:nth-child(2),
+            .report-table td:nth-child(2) {
+                width: 13% !important;
+            }
+
+            .report-table th:nth-child(3),
+            .report-table td:nth-child(3) {
+                width: 10% !important;
+            }
+
+            .report-table th:nth-child(4),
+            .report-table td:nth-child(4) {
+                width: 32% !important;
+            }
+
+            .loading {
+                padding: 20px;
+                font-size: 14px;
+            }
+
+            .empty-state {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px 0;
+                margin: 0;
+            }
+
+            .container {
+                padding: 10px 5px;
+                border-radius: 0;
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+            }
+
+            .report-title {
+                font-size: 18px;
+            }
+
+            .report-actions {
+                flex-direction: column;
+            }
+
+            .action-button {
+                width: 100%;
+            }
+
+            .report-table-container {
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            .report-table {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                font-size: 11px;
+            }
+
+            .report-table th,
+            .report-table td {
+                padding: 5px 2px;
+            }
+
+            /* 小屏手机列宽策略：压缩后三列，给商品类型更多空间 */
+            .report-table th:first-child,
+            .report-table td:first-child {
+                width: 48% !important;
+            }
+
+            .report-table th:nth-child(2),
+            .report-table td:nth-child(2) {
+                width: 11% !important;
+            }
+
+            .report-table th:nth-child(3),
+            .report-table td:nth-child(3) {
+                width: 8% !important;
+            }
+
+            .report-table th:nth-child(4),
+            .report-table td:nth-child(4) {
+                width: 33% !important;
+            }
         }
     </style>
 </head>
