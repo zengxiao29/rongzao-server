@@ -53,6 +53,9 @@ rongzao.db
 *.bak
 *.backup
 
+# Database backups
+db_backup/
+
 # Excel files
 *.xls
 *.xlsx

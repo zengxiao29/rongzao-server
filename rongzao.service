@@ -1,0 +1,18 @@
+[Unit]
+Description=Rongzao Flask Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/rongzao-server
+ExecStart=/usr/bin/python3 /root/rongzao-server/app.py
+Restart=always
+RestartSec=10
+
+# 日志输出
+StandardOutput=append:/root/rongzao-server/app.log
+StandardError=append:/root/rongzao-server/app.log
+
+[Install]
+WantedBy=multi-user.target

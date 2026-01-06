@@ -26,19 +26,19 @@ register_report_routes(app)
 if __name__ == '__main__':
     # 初始化用户表
     init_user_table()
-    
+
     # 检查是否为服务器环境（通过 .ecs 文件判断）
     is_server = os.path.exists('.ecs')
-    
+
     if is_server:
-        # 服务器环境：使用 80 端口
-        port = 80
+        # 服务器环境：使用 8818 端口
+        port = 8818
         debug = False
-        print("运行模式: 服务器环境 (端口 80)")
+        print("运行模式: 服务器环境 (端口 8818)")
     else:
-        # 开发环境：使用 5001 端口
-        port = 5001
+        # 开发环境：使用 8818 端口
+        port = 8818
         debug = True
-        print("运行模式: 开发环境 (端口 5001)")
-    
+        print("运行模式: 开发环境 (端口 8818)")
+
     app.run(debug=debug, host='0.0.0.0', port=port)
