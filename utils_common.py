@@ -24,10 +24,10 @@ def register_chinese_font():
     font_name = 'Helvetica'  # 默认字体
     font_paths = [
         # Linux 系统字体
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-        '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
         '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
         '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+        '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
         # macOS 系统字体
         '/System/Library/Fonts/PingFang.ttc',
         '/System/Library/Fonts/STHeiti Light.ttc',
@@ -41,13 +41,21 @@ def register_chinese_font():
                 # 根据文件类型选择注册方式
                 if font_path.endswith('.ttc'):
                     # TTC文件需要指定子字体索引
-                    pdfmetrics.registerFont(TTFont('ChineseFont', font_path, subfontIndex=0))
+                    # 尝试不同的子字体索引来找到支持中文的字体
+                    for subfont_index in range(4):  # 通常TTC文件中前几个字体包含中文
+                        try:
+                            pdfmetrics.registerFont(TTFont('ChineseFont', font_path, subfontIndex=subfont_index))
+                            font_name = 'ChineseFont'
+                            print(f'成功注册中文字体: {font_path} (subfontIndex={subfont_index})')
+                            return font_name
+                        except Exception as e:
+                            continue
                 else:
                     # TTF文件直接注册
                     pdfmetrics.registerFont(TTFont('ChineseFont', font_path))
-                font_name = 'ChineseFont'
-                print(f'成功注册中文字体: {font_path}')
-                break
+                    font_name = 'ChineseFont'
+                    print(f'成功注册中文字体: {font_path}')
+                    break
         except Exception as e:
             print(f'尝试注册字体 {font_path} 失败: {str(e)}')
             continue
