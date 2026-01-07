@@ -63,3 +63,4 @@ db_backup/
 *.zip
 *.rar
 *.7z
+analysis_debug/

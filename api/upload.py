@@ -282,13 +282,19 @@ def upload_to_database_internal(file):
 
     # 提交事务
     conn.commit()
+
+    # 检查数据库中是否存在"金蝶对接"数据
+    cursor.execute("SELECT COUNT(*) FROM OrderDetails WHERE 店铺名称 = '金蝶对接'")
+    jindie_count = cursor.fetchone()[0]
+
     conn.close()
 
     filtered_count = len(df_deduped) - len(df_filtered)
 
     print(f'上传完成: 成功={success_count}, 重复={duplicate_count}, 错误={error_count}, 过滤={filtered_count}')
+    print(f'数据库中"金蝶对接"记录数: {jindie_count}')
 
-    return {
+    result = {
         'success': True,
         'total': len(df_deduped),
         'success_count': success_count,
@@ -296,3 +302,9 @@ def upload_to_database_internal(file):
         'error_count': error_count,
         'filtered_count': filtered_count
     }
+
+    # 如果数据库中存在"金蝶对接"数据，添加警告信息
+    if jindie_count > 0:
+        result['warning'] = f'数据库中存在 {jindie_count} 条"金蝶对接"记录，请联系管理员处理'
+
+    return result

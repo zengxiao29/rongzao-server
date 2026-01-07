@@ -517,6 +517,19 @@ async function handleFileUpload(file) {
             const message = `上传完成！总计 ${result.total} 条，成功 ${result.success_count} 条，重复 ${result.duplicate_count} 条，错误 ${result.error_count} 条`;
             uploadResult.querySelector('p').textContent = message;
 
+            // 检查是否有警告信息
+            if (result.warning) {
+                const warningDiv = document.createElement('div');
+                warningDiv.style.backgroundColor = '#fff3cd';
+                warningDiv.style.border = '1px solid #ffc107';
+                warningDiv.style.color = '#856404';
+                warningDiv.style.padding = '10px 15px';
+                warningDiv.style.marginTop = '10px';
+                warningDiv.style.borderRadius = '5px';
+                warningDiv.textContent = '⚠️ ' + result.warning;
+                uploadResult.appendChild(warningDiv);
+            }
+
             // 重新加载数据
             await loadDataFromDb();
         } else {
