@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>生产管理</title>
+    <title>防伪码管理</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <style>
@@ -21,25 +21,6 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .action-button {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-
-        .add-button {
-            background: #667eea;
-            color: white;
-        }
-
-        .add-button:hover {
-            background: #5568d3;
         }
     </style>
 </head>
@@ -73,9 +54,7 @@
         if (user && user.role === 'admin') {
             // 是管理员，显示页面内容
             pageContent.innerHTML = `
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button class="action-button add-button" onclick="window.location.href='/authentication_code'">防伪码管理</button>
-                </div>
+                <!-- 页面内容待添加 -->
             `;
         } else {
             // 不是管理员，显示权限不足提示

@@ -45,6 +45,11 @@ Thumbs.db
 *.sqlite3
 rongzao.db
 
+# Environment variables
+.env
+.env.local
+.env.*.local
+
 # Logs
 *.log
 
@@ -63,4 +68,10 @@ db_backup/
 *.zip
 *.rar
 *.7z
+
+# Server setup scripts
+setup_env.sh
+setup_env_smart.sh
+
+# Debug scripts
 analysis_debug/

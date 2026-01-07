@@ -51,6 +51,8 @@ function logout() {
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
+    // 清除 cookie
+    document.cookie = 'token=; path=/; max-age=0';
     window.location.href = '/login';
 }
 

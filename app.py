@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
 from flask import Flask
+from dotenv import load_dotenv
+
+# 加载 .env 文件中的环境变量
+load_dotenv()
+
 from routes import register_routes
 from api.dates import register_dates_routes
 from api.analyse import register_analyse_routes

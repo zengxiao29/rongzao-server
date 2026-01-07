@@ -530,7 +530,8 @@ async function handleFileUpload(file) {
                 uploadResult.appendChild(warningDiv);
             }
 
-            // 重新加载数据
+            // 重新加载可用日期和数据
+            await loadAvailableDates();
             await loadDataFromDb();
         } else {
             alert('上传失败: ' + result.error);

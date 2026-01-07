@@ -36,10 +36,14 @@ async function handleLogin(event) {
                 // 记住我，保存到 localStorage
                 localStorage.setItem('token', result.token);
                 localStorage.setItem('user', JSON.stringify(result.user));
+                // 同时保存到 cookie，过期时间为 14 天
+                document.cookie = `token=${result.token}; path=/; max-age=${14 * 24 * 60 * 60}`;
             } else {
                 // 不记住，保存到 sessionStorage
                 sessionStorage.setItem('token', result.token);
                 sessionStorage.setItem('user', JSON.stringify(result.user));
+                // 同时保存到 cookie，会话级别（关闭浏览器即失效）
+                document.cookie = `token=${result.token}; path=/`;
             }
 
             // 跳转到首页

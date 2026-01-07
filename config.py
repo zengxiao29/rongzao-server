@@ -28,7 +28,14 @@ class ProductionConfig(Config):
     """生产环境配置"""
     DEBUG = False
     SECRET_KEY = os.environ.get('SECRET_KEY')  # 必须从环境变量获取
-    
+    JWT_SECRET = os.environ.get('JWT_SECRET')  # JWT 密钥也必须从环境变量获取
+
+    # 验证环境变量
+    if not SECRET_KEY:
+        raise ValueError("生产环境必须设置 SECRET_KEY 环境变量")
+    if not JWT_SECRET:
+        raise ValueError("生产环境必须设置 JWT_SECRET 环境变量")
+
     # 生产环境特定的配置
     LOG_LEVEL = 'WARNING'
 

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import render_template, send_from_directory
+from utils.auth import token_required, admin_required
 
 
 def register_routes(app):
@@ -49,6 +50,11 @@ def register_routes(app):
     def report():
         """报表页面"""
         return render_template('report.html')
+
+    @app.route('/authentication_code')
+    def authentication_code():
+        """防伪码管理页面"""
+        return render_template('authentication_code.html')
 
     @app.route('/<path:filename>')
     def serve_static_file(filename):

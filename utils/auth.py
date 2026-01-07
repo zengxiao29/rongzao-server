@@ -1,11 +1,22 @@
 # -*- coding: utf-8 -*-
 import jwt
+import os
+import warnings
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify, g
 
 # JWT 配置
-JWT_SECRET = 'your-secret-key-change-this-in-production'  # 生产环境应该使用环境变量
+JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-secret-key-change-in-production')
+
+# 验证是否使用了默认密钥
+if JWT_SECRET == 'dev-secret-key-change-in-production' or JWT_SECRET == 'your-secret-key-change-this-in-production':
+    warnings.warn(
+        "JWT_SECRET 使用了默认值，请设置环境变量！\n"
+        "生产环境必须设置强随机密钥，否则存在严重安全风险。\n"
+        "设置方法: export JWT_SECRET='your-secret-key'"
+    )
+
 JWT_ALGORITHM = 'HS256'
 
 # Token 过期时间
@@ -127,3 +138,41 @@ def role_required(required_role):
 
         return decorated
     return decorator
+
+
+def admin_required(f):
+    """
+    管理员权限装饰器，用于检查用户是否为管理员
+
+    Usage:
+        @app.route('/admin/page')
+        @admin_required
+        def admin_page():
+            return render_template('admin.html')
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # 从 cookie 中获取 token
+        token = request.cookies.get('token')
+
+        if not token:
+            # 如果没有 token，重定向到首页
+            from flask import redirect, url_for
+            return redirect(url_for('index'))
+
+        # 验证 token
+        payload = verify_token(token)
+        if not payload:
+            # Token 无效，重定向到首页
+            from flask import redirect, url_for
+            return redirect(url_for('index'))
+
+        # 检查角色
+        if payload.get('role') != 'admin':
+            # 不是管理员，重定向到首页
+            from flask import redirect, url_for
+            return redirect(url_for('index'))
+
+        return f(*args, **kwargs)
+
+    return decorated
