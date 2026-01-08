@@ -204,14 +204,14 @@ function renderTableData(tabs) {
  * 计算客单价
  * @param {number} orders - 订单数
  * @param {number} amount - 让利后金额
- * @returns {string} 客单价（保留2位小数）
+ * @returns {string} 客单价（四舍五入取整）
  */
 function calculateAOV(orders, amount) {
     if (orders === 0) {
-        return '0.00';
+        return '0';
     }
     const aov = amount / orders;
-    return aov.toFixed(2);
+    return aov.toFixed(0);
 }
 
 /**
