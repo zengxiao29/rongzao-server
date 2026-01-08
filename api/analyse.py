@@ -122,9 +122,13 @@ def register_analyse_routes(app):
                             'valid_orders': 0,
                             'discount_amount': 0,
                             'douyin_orders': 0,
+                            'douyin_amount': 0,
                             'tmall_orders': 0,
+                            'tmall_amount': 0,
                             'youzan_orders': 0,
-                            'jd_orders': 0
+                            'youzan_amount': 0,
+                            'jd_orders': 0,
+                            'jd_amount': 0
                         }
 
                     # 累加总数
@@ -135,18 +139,22 @@ def register_analyse_routes(app):
                     if shop_type:
                         if '抖音' in shop_type or '今日头条' in shop_type or '鲁班' in shop_type:
                             mapped_title_stats[mapped_title]['douyin_orders'] += valid_orders
+                            mapped_title_stats[mapped_title]['douyin_amount'] += discount_amount
                             if '舰载熊猫' in product_name:
                                 print(f"  -> 匹配到抖音列，累计: {mapped_title_stats[mapped_title]['douyin_orders']}")
                         elif '天猫' in shop_type:
                             mapped_title_stats[mapped_title]['tmall_orders'] += valid_orders
+                            mapped_title_stats[mapped_title]['tmall_amount'] += discount_amount
                             if '舰载熊猫' in product_name:
                                 print(f"  -> 匹配到天猫列，累计: {mapped_title_stats[mapped_title]['tmall_orders']}")
                         elif '有赞' in shop_type:
                             mapped_title_stats[mapped_title]['youzan_orders'] += valid_orders
+                            mapped_title_stats[mapped_title]['youzan_amount'] += discount_amount
                             if '舰载熊猫' in product_name:
                                 print(f"  -> 匹配到有赞列，累计: {mapped_title_stats[mapped_title]['youzan_orders']}")
                         elif '京东' in shop_type:
                             mapped_title_stats[mapped_title]['jd_orders'] += valid_orders
+                            mapped_title_stats[mapped_title]['jd_amount'] += discount_amount
                             if '舰载熊猫' in product_name:
                                 print(f"  -> 匹配到京东列，累计: {mapped_title_stats[mapped_title]['jd_orders']}")
 
@@ -173,9 +181,13 @@ def register_analyse_routes(app):
                                 'valid_orders': stats['valid_orders'],
                                 'discount_amount': stats['discount_amount'],
                                 'douyin_orders': stats['douyin_orders'],
+                                'douyin_amount': stats['douyin_amount'],
                                 'tmall_orders': stats['tmall_orders'],
+                                'tmall_amount': stats['tmall_amount'],
                                 'youzan_orders': stats['youzan_orders'],
-                                'jd_orders': stats['jd_orders']
+                                'youzan_amount': stats['youzan_amount'],
+                                'jd_orders': stats['jd_orders'],
+                                'jd_amount': stats['jd_amount']
                             }
                         else:
                             # 没有数据，设置为0
@@ -183,9 +195,13 @@ def register_analyse_routes(app):
                                 'valid_orders': 0,
                                 'discount_amount': 0.0,
                                 'douyin_orders': 0,
+                                'douyin_amount': 0.0,
                                 'tmall_orders': 0,
+                                'tmall_amount': 0.0,
                                 'youzan_orders': 0,
-                                'jd_orders': 0
+                                'youzan_amount': 0.0,
+                                'jd_orders': 0,
+                                'jd_amount': 0.0
                             }
 
                     # 转换为列表格式
@@ -197,9 +213,13 @@ def register_analyse_routes(app):
                                 'valid_orders': int(stats.get('valid_orders', 0)),
                                 'discount_amount': float(stats.get('discount_amount', 0)),
                                 'douyin_orders': int(stats.get('douyin_orders', 0)),
+                                'douyin_amount': float(stats.get('douyin_amount', 0)),
                                 'tmall_orders': int(stats.get('tmall_orders', 0)),
+                                'tmall_amount': float(stats.get('tmall_amount', 0)),
                                 'youzan_orders': int(stats.get('youzan_orders', 0)),
-                                'jd_orders': int(stats.get('jd_orders', 0))
+                                'youzan_amount': float(stats.get('youzan_amount', 0)),
+                                'jd_orders': int(stats.get('jd_orders', 0)),
+                                'jd_amount': float(stats.get('jd_amount', 0))
                             }
                             for product_type, stats in type_stats.items()
                         ]

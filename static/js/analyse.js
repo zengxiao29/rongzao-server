@@ -201,23 +201,45 @@ function renderTableData(tabs) {
 }
 
 /**
+ * 计算客单价
+ * @param {number} orders - 订单数
+ * @param {number} amount - 让利后金额
+ * @returns {string} 客单价（保留2位小数）
+ */
+function calculateAOV(orders, amount) {
+    if (orders === 0) {
+        return '0.00';
+    }
+    const aov = amount / orders;
+    return aov.toFixed(2);
+}
+
+/**
  * 渲染 PC 端表格
  */
 function renderPCTable(data, container) {
     // 计算合计
     let totalValidOrders = 0;
     let totalDouyinOrders = 0;
+    let totalDouyinAmount = 0;
     let totalTmallOrders = 0;
+    let totalTmallAmount = 0;
     let totalYouzanOrders = 0;
+    let totalYouzanAmount = 0;
     let totalJdOrders = 0;
+    let totalJdAmount = 0;
     let totalDiscountAmount = 0;
 
     data.forEach(item => {
         totalValidOrders += item.valid_orders;
         totalDouyinOrders += item.douyin_orders;
+        totalDouyinAmount += item.douyin_amount;
         totalTmallOrders += item.tmall_orders;
+        totalTmallAmount += item.tmall_amount;
         totalYouzanOrders += item.youzan_orders;
+        totalYouzanAmount += item.youzan_amount;
         totalJdOrders += item.jd_orders;
+        totalJdAmount += item.jd_amount;
         totalDiscountAmount += item.discount_amount;
     });
 
@@ -261,10 +283,10 @@ function renderPCTable(data, container) {
             <tr data-index="${index}" data-product-type="${item.product_type}" onclick="handleTableRowClick(this)">
                 <td>${item.product_type}</td>
                 <td>${item.valid_orders}</td>
-                <td>${item.douyin_orders}</td>
-                <td>${item.tmall_orders}</td>
+                <td>${item.douyin_orders} (¥${calculateAOV(item.douyin_orders, item.douyin_amount)})</td>
+                <td>${item.tmall_orders} (¥${calculateAOV(item.tmall_orders, item.tmall_amount)})</td>
                 <td>${item.youzan_orders}</td>
-                <td>${item.jd_orders}</td>
+                <td>${item.jd_orders} (¥${calculateAOV(item.jd_orders, item.jd_amount)})</td>
                 <td>¥${parseFloat(item.discount_amount).toFixed(2)}</td>
             </tr>
         `;
@@ -275,10 +297,10 @@ function renderPCTable(data, container) {
             <tr class="total-row" style="background-color: #f0f0f0; font-weight: bold;">
                 <td>合计</td>
                 <td>${totalValidOrders}</td>
-                <td>${totalDouyinOrders}</td>
-                <td>${totalTmallOrders}</td>
+                <td>${totalDouyinOrders} (¥${calculateAOV(totalDouyinOrders, totalDouyinAmount)})</td>
+                <td>${totalTmallOrders} (¥${calculateAOV(totalTmallOrders, totalTmallAmount)})</td>
                 <td>${totalYouzanOrders}</td>
-                <td>${totalJdOrders}</td>
+                <td>${totalJdOrders} (¥${calculateAOV(totalJdOrders, totalJdAmount)})</td>
                 <td>¥${totalDiscountAmount.toFixed(2)}</td>
             </tr>
     `;
