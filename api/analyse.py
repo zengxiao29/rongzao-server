@@ -123,14 +123,15 @@ def register_analyse_routes(app):
                             'discount_amount': 0,
                             'douyin_orders': 0,
                             'tmall_orders': 0,
-                            'youzan_orders': 0
+                            'youzan_orders': 0,
+                            'jd_orders': 0
                         }
 
                     # 累加总数
                     mapped_title_stats[mapped_title]['valid_orders'] += valid_orders
                     mapped_title_stats[mapped_title]['discount_amount'] += discount_amount
 
-                    # 按店铺类型统计（只统计这三个渠道的）
+                    # 按店铺类型统计（只统计这四个渠道的）
                     if shop_type:
                         if '抖音' in shop_type or '今日头条' in shop_type or '鲁班' in shop_type:
                             mapped_title_stats[mapped_title]['douyin_orders'] += valid_orders
@@ -144,6 +145,10 @@ def register_analyse_routes(app):
                             mapped_title_stats[mapped_title]['youzan_orders'] += valid_orders
                             if '舰载熊猫' in product_name:
                                 print(f"  -> 匹配到有赞列，累计: {mapped_title_stats[mapped_title]['youzan_orders']}")
+                        elif '京东' in shop_type:
+                            mapped_title_stats[mapped_title]['jd_orders'] += valid_orders
+                            if '舰载熊猫' in product_name:
+                                print(f"  -> 匹配到京东列，累计: {mapped_title_stats[mapped_title]['jd_orders']}")
 
                 # 按category分组组织数据
                 tabs_data = []
@@ -169,7 +174,8 @@ def register_analyse_routes(app):
                                 'discount_amount': stats['discount_amount'],
                                 'douyin_orders': stats['douyin_orders'],
                                 'tmall_orders': stats['tmall_orders'],
-                                'youzan_orders': stats['youzan_orders']
+                                'youzan_orders': stats['youzan_orders'],
+                                'jd_orders': stats['jd_orders']
                             }
                         else:
                             # 没有数据，设置为0
@@ -178,7 +184,8 @@ def register_analyse_routes(app):
                                 'discount_amount': 0.0,
                                 'douyin_orders': 0,
                                 'tmall_orders': 0,
-                                'youzan_orders': 0
+                                'youzan_orders': 0,
+                                'jd_orders': 0
                             }
 
                     # 转换为列表格式
@@ -191,7 +198,8 @@ def register_analyse_routes(app):
                                 'discount_amount': float(stats.get('discount_amount', 0)),
                                 'douyin_orders': int(stats.get('douyin_orders', 0)),
                                 'tmall_orders': int(stats.get('tmall_orders', 0)),
-                                'youzan_orders': int(stats.get('youzan_orders', 0))
+                                'youzan_orders': int(stats.get('youzan_orders', 0)),
+                                'jd_orders': int(stats.get('jd_orders', 0))
                             }
                             for product_type, stats in type_stats.items()
                         ]

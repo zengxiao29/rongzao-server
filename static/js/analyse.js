@@ -37,14 +37,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 加载可用的日期
     await loadAvailableDates();
 
-    // 设置默认日期范围：结束日期为最后可用日期，开始日期为往前6天
+    // 设置默认日期范围：起止日期都为最后可用日期（最新一天）
     if (availableDates.length > 0) {
         const lastDate = availableDates[availableDates.length - 1];
-        const lastDateObj = new Date(lastDate);
-        const startDateObj = new Date(lastDateObj);
-        startDateObj.setDate(startDateObj.getDate() - 6);
         
-        selectedStartDate = formatDate(startDateObj);
+        selectedStartDate = lastDate;
         selectedEndDate = lastDate;
         
         document.getElementById('startDate').value = selectedStartDate;
@@ -212,6 +209,7 @@ function renderPCTable(data, container) {
     let totalDouyinOrders = 0;
     let totalTmallOrders = 0;
     let totalYouzanOrders = 0;
+    let totalJdOrders = 0;
     let totalDiscountAmount = 0;
 
     data.forEach(item => {
@@ -219,6 +217,7 @@ function renderPCTable(data, container) {
         totalDouyinOrders += item.douyin_orders;
         totalTmallOrders += item.tmall_orders;
         totalYouzanOrders += item.youzan_orders;
+        totalJdOrders += item.jd_orders;
         totalDiscountAmount += item.discount_amount;
     });
 
@@ -245,8 +244,12 @@ function renderPCTable(data, container) {
                             <button class="sort-btn" data-column="4" onclick="sortTable(4)">▼</button>
                         </th>
                         <th>
-                            让利后金额
+                            京东
                             <button class="sort-btn" data-column="5" onclick="sortTable(5)">▼</button>
+                        </th>
+                        <th>
+                            让利后金额
+                            <button class="sort-btn" data-column="6" onclick="sortTable(6)">▼</button>
                         </th>
                     </tr>
                 </thead>
@@ -261,6 +264,7 @@ function renderPCTable(data, container) {
                 <td>${item.douyin_orders}</td>
                 <td>${item.tmall_orders}</td>
                 <td>${item.youzan_orders}</td>
+                <td>${item.jd_orders}</td>
                 <td>¥${parseFloat(item.discount_amount).toFixed(2)}</td>
             </tr>
         `;
@@ -274,6 +278,7 @@ function renderPCTable(data, container) {
                 <td>${totalDouyinOrders}</td>
                 <td>${totalTmallOrders}</td>
                 <td>${totalYouzanOrders}</td>
+                <td>${totalJdOrders}</td>
                 <td>¥${totalDiscountAmount.toFixed(2)}</td>
             </tr>
     `;
@@ -363,6 +368,7 @@ function renderMobileCards(data, container) {
     let totalDouyinOrders = 0;
     let totalTmallOrders = 0;
     let totalYouzanOrders = 0;
+    let totalJdOrders = 0;
     let totalDiscountAmount = 0;
 
     data.forEach(item => {
@@ -370,6 +376,7 @@ function renderMobileCards(data, container) {
         totalDouyinOrders += item.douyin_orders;
         totalTmallOrders += item.tmall_orders;
         totalYouzanOrders += item.youzan_orders;
+        totalJdOrders += item.jd_orders;
         totalDiscountAmount += item.discount_amount;
     });
 
@@ -394,6 +401,10 @@ function renderMobileCards(data, container) {
                 <div class="mobile-card-item">
                     <span class="mobile-card-label">有赞</span>
                     <span class="mobile-card-value">${item.youzan_orders}</span>
+                </div>
+                <div class="mobile-card-item">
+                    <span class="mobile-card-label">京东</span>
+                    <span class="mobile-card-value">${item.jd_orders}</span>
                 </div>
                 <div class="mobile-card-item">
                     <span class="mobile-card-label">让利后金额</span>
@@ -422,6 +433,10 @@ function renderMobileCards(data, container) {
             <div class="mobile-card-item">
                 <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">有赞</span>
                 <span class="mobile-card-value" style="color: white;">${totalYouzanOrders}</span>
+            </div>
+            <div class="mobile-card-item">
+                <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">京东</span>
+                <span class="mobile-card-value" style="color: white;">${totalJdOrders}</span>
             </div>
             <div class="mobile-card-item">
                 <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">让利后金额</span>
