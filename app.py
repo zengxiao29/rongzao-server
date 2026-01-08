@@ -14,6 +14,7 @@ from api.export import register_export_routes
 from api.product_manage import register_product_manage_routes
 from api.auth import register_auth_routes
 from api.report import register_report_routes
+from api.analyse_by_product import register_analyse_by_product_routes
 from database import init_user_table
 
 app = Flask(__name__)
@@ -27,6 +28,7 @@ register_export_routes(app)
 register_product_manage_routes(app)
 register_auth_routes(app)
 register_report_routes(app)
+register_analyse_by_product_routes(app)
 
 if __name__ == '__main__':
     # 初始化用户表

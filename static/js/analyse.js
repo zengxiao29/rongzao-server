@@ -258,7 +258,7 @@ function renderPCTable(data, container) {
 
     data.forEach((item, index) => {
         containerHTML += `
-            <tr data-index="${index}">
+            <tr data-index="${index}" data-product-type="${item.product_type}" onclick="handleTableRowClick(this)">
                 <td>${item.product_type}</td>
                 <td>${item.valid_orders}</td>
                 <td>${item.douyin_orders}</td>
@@ -587,6 +587,23 @@ function changeMonth(delta) {
 }
 
 /**
+ * 切换年份
+ */
+function changeYear(delta) {
+    currentMonth.setFullYear(currentMonth.getFullYear() + delta);
+    renderDatePicker();
+}
+
+/**
+ * 定位到本月
+ */
+function goToCurrentMonth() {
+    const today = new Date();
+    currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    renderDatePicker();
+}
+
+/**
  * 渲染日期选择器
  */
 function renderDatePicker() {
@@ -714,4 +731,30 @@ function closeInventoryUploadModal() {
     const modal = document.getElementById('inventoryUploadModal');
     modal.style.display = 'none';
     modal.classList.remove('show');
+}
+
+/**
+ * 处理表格行点击事件
+ */
+function handleTableRowClick(row) {
+    // 获取商品类型
+    const productType = row.getAttribute('data-product-type');
+    
+    // 移除所有行的高亮
+    const allRows = document.querySelectorAll('#tableBody tr');
+    allRows.forEach(r => r.style.backgroundColor = '');
+    
+    // 高亮当前行
+    row.style.backgroundColor = '#7ED321';
+    
+    // 获取日期范围
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    // 加载商品详情
+    if (typeof loadProductDetails === 'function') {
+        loadProductDetails(productType, startDate, endDate);
+    } else {
+        console.error('loadProductDetails 函数未定义');
+    }
 }

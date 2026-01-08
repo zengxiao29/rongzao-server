@@ -204,6 +204,99 @@
             line-height: 1.5;
         }
 
+        /* 详情区样式 */
+        .details-container {
+            padding: 20px;
+        }
+
+        .details-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .chart-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #333;
+        }
+
+        .chart-toggle {
+            display: flex;
+            gap: 10px;
+        }
+
+        .toggle-btn {
+            padding: 8px 20px;
+            border: 1px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            background: #f8f9ff;
+        }
+
+        .toggle-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .chart-container {
+            width: 100%;
+        }
+
+        .stats-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .stats-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #333;
+        }
+
+        .growth-indicator {
+            width: 20px;
+            height: 20px;
+            background: #7ED321;
+            border-radius: 50%;
+        }
+
         .upload-section {
             margin-bottom: 20px;
             padding: 20px;
@@ -426,12 +519,22 @@
 
         .date-picker-nav {
             display: flex;
-            gap: 10px;
+            justify-content: space-between;
             align-items: center;
+            gap: 5px;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+
+        .date-picker-nav .nav-buttons {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: nowrap;
         }
 
         .date-picker-nav button {
-            padding: 5px 10px;
+            padding: 5px 8px;
             background: #667eea;
             color: white;
             border: none;
@@ -442,6 +545,27 @@
 
         .date-picker-nav button:hover {
             background: #5568d3;
+        }
+
+        .date-picker-nav .month-nav-btn {
+            background: transparent;
+            color: #667eea;
+            border: 1px solid #667eea;
+        }
+
+        .date-picker-nav .month-nav-btn:hover {
+            background: #f8f9ff;
+        }
+
+        .date-picker-nav .current-month-btn {
+            background: transparent;
+            color: #5568d3;
+            border: 1px solid #5568d3;
+            font-weight: 500;
+        }
+
+        .date-picker-nav .current-month-btn:hover {
+            background: #f8f9ff;
         }
 
         .date-picker-nav span {
@@ -851,25 +975,32 @@
                 </div>
 
                 <div class="table-container" id="tableContainer">
-                    <div class="empty-state">
-                        <div style="font-size: 3rem;">📊</div>
-                        <p>暂无数据</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+                                <div class="empty-state">
+                                    <div style="font-size: 3rem;">📊</div>
+                                    <p>暂无数据</p>
+                                </div>
+                            </div>
+                
+                            <!-- 商品详情区 -->
+                            <div id="detailsSection" style="display: none; margin-top: 30px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                            </div>
+                        </div>
+                    </div>    </div>
 
     <!-- 日期选择弹窗 -->
     <div class="date-picker-modal" id="datePickerModal">
         <div class="date-picker-content">
             <div class="date-picker-header">
                 <div class="date-picker-nav">
-                    <button onclick="changeMonth(-1)">◀</button>
-                    <span id="currentMonthYear"></span>
-                    <button onclick="changeMonth(1)">▶</button>
+                    <div class="nav-buttons">
+                        <button onclick="changeYear(-1)">◀</button>
+                        <button class="month-nav-btn" onclick="changeMonth(-1)">◀</button>
+                        <span id="currentMonthYear"></span>
+                        <button class="month-nav-btn" onclick="changeMonth(1)">▶</button>
+                        <button onclick="changeYear(1)">▶</button>
+                    </div>
+                    <button class="current-month-btn" onclick="goToCurrentMonth()">本月</button>
                 </div>
-                <button onclick="closeDatePicker()" style="background:transparent; color:#333; font-size:18px; padding:5px 10px;">×</button>
             </div>
             <div class="date-picker-grid" id="datePickerGrid">
                 <!-- 日期将由JS动态生成 -->
@@ -926,6 +1057,8 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/analyse_common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/apexcharts.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/analyse_by_product.js') }}"></script>
     <script src="{{ url_for('static', filename='js/analyse.js') }}"></script>
 </body>
 </html>
