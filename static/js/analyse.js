@@ -283,10 +283,10 @@ function renderPCTable(data, container) {
             <tr data-index="${index}" data-product-type="${item.product_type}" onclick="handleTableRowClick(this)">
                 <td>${item.product_type}</td>
                 <td>${item.valid_orders}</td>
-                <td>${item.douyin_orders}  /  ¥${calculateAOV(item.douyin_orders, item.douyin_amount)}</td>
-                <td>${item.tmall_orders}  /  ¥${calculateAOV(item.tmall_orders, item.tmall_amount)}</td>
+                <td>${item.douyin_orders}<span style="color: #999;">  /  <i>¥${calculateAOV(item.douyin_orders, item.douyin_amount)}</i></span></td>
+                <td>${item.tmall_orders}<span style="color: #999;">  /  <i>¥${calculateAOV(item.tmall_orders, item.tmall_amount)}</i></span></td>
                 <td>${item.youzan_orders}</td>
-                <td>${item.jd_orders}  /  ¥${calculateAOV(item.jd_orders, item.jd_amount)}</td>
+                <td>${item.jd_orders}<span style="color: #999;">  /  <i>¥${calculateAOV(item.jd_orders, item.jd_amount)}</i></span></td>
                 <td>¥${parseFloat(item.discount_amount).toFixed(2)}</td>
             </tr>
         `;
@@ -297,10 +297,10 @@ function renderPCTable(data, container) {
             <tr class="total-row" style="background-color: #f0f0f0; font-weight: bold;">
                 <td>合计</td>
                 <td>${totalValidOrders}</td>
-                <td>${totalDouyinOrders}  /  ¥${calculateAOV(totalDouyinOrders, totalDouyinAmount)}</td>
-                <td>${totalTmallOrders}  /  ¥${calculateAOV(totalTmallOrders, totalTmallAmount)}</td>
+                <td>${totalDouyinOrders}<span style="color: #999;">  /  <i>¥${calculateAOV(totalDouyinOrders, totalDouyinAmount)}</i></span></td>
+                <td>${totalTmallOrders}<span style="color: #999;">  /  <i>¥${calculateAOV(totalTmallOrders, totalTmallAmount)}</i></span></td>
                 <td>${totalYouzanOrders}</td>
-                <td>${totalJdOrders}  /  ¥${calculateAOV(totalJdOrders, totalJdAmount)}</td>
+                <td>${totalJdOrders}<span style="color: #999;">  /  <i>¥${calculateAOV(totalJdOrders, totalJdAmount)}</i></span></td>
                 <td>¥${totalDiscountAmount.toFixed(2)}</td>
             </tr>
     `;
