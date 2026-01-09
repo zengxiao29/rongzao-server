@@ -130,9 +130,15 @@ function renderSalesChart(salesCurveData) {
         }],
         chart: {
             type: 'line',
-            height: 350,
+            height: 400,
             toolbar: {
                 show: false
+            },
+            padding: {
+                top: 10,
+                right: 10,
+                bottom: 10,
+                left: 10
             }
         },
         stroke: {
@@ -147,7 +153,7 @@ function renderSalesChart(salesCurveData) {
                 style: {
                     fontSize: '11px'
                 },
-                offsetY: 5
+                offsetY: 0
             }
         },
         yaxis: {
