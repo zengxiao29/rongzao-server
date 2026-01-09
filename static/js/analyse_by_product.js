@@ -130,15 +130,15 @@ function renderSalesChart(salesCurveData) {
         }],
         chart: {
             type: 'line',
-            height: 400,
+            height: 240,
             toolbar: {
                 show: false
             },
             padding: {
-                top: 10,
-                right: 10,
-                bottom: 10,
-                left: 10
+                top: 5,
+                right: 5,
+                bottom: 5,
+                left: 5
             }
         },
         stroke: {
@@ -149,7 +149,7 @@ function renderSalesChart(salesCurveData) {
         xaxis: {
             categories: salesCurveData.dates,
             labels: {
-                rotate: -45,
+                rotate: -30,
                 style: {
                     fontSize: '11px'
                 },
@@ -175,6 +175,12 @@ function renderSalesChart(salesCurveData) {
             row: {
                 colors: ['#f3f3f3', 'transparent'],
                 opacity: 0.5
+            },
+            padding: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0
             }
         }
     };
