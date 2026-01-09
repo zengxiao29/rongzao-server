@@ -210,9 +210,7 @@ h1 {
 }
 
 /* 图表区域样式 */
-.chart-section {
-    margin-top: 30px;
-}
+/* .chart-section 样式在 analyse.html 中定义，这里不设置通用样式 */
 
 .chart-section h2 {
     color: #333;
@@ -225,7 +223,7 @@ h1 {
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    height: 500px;
+    /* height: 500px; 移除固定高度，由 analyse.html 中的样式控制 */
 }
 
 /* 统一页眉样式 */

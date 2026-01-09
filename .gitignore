@@ -75,3 +75,11 @@ setup_env_smart.sh
 
 # Debug scripts
 analysis_debug/
+
+# Test files and directories
+test_files/
+temp_files/
+
+# iFlow CLI files
+.iflow/
+IFLOW.md

@@ -31,21 +31,28 @@ register_report_routes(app)
 register_analyse_by_product_routes(app)
 
 if __name__ == '__main__':
-    # 初始化用户表
-    init_user_table()
-
-    # 检查是否为服务器环境（通过 .ecs 文件判断）
-    is_server = os.path.exists('.ecs')
-
-    if is_server:
-        # 服务器环境：使用 8818 端口
-        port = 8818
+    import argparse
+    
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description='启动Flask应用')
+    parser.add_argument('--port', type=int, default=None, help='服务器端口号')
+    parser.add_argument('--host', type=str, default='0.0.0.0', help='服务器主机地址')
+    args = parser.parse_args()
+    
+    # 检查是否是服务器环境
+    if os.path.exists('.ecs'):
+        # 服务器环境
+        default_port = 8818
         debug = False
-        print("运行模式: 服务器环境 (端口 8818)")
+        env_name = "服务器环境"
     else:
-        # 开发环境：使用 8818 端口
-        port = 8818
+        # 开发环境
+        default_port = 8818
         debug = True
-        print("运行模式: 开发环境 (端口 8818)")
-
-    app.run(debug=debug, host='0.0.0.0', port=port)
+        env_name = "开发环境"
+    
+    # 确定端口号：命令行参数 > 环境变量 > 默认值
+    port = args.port if args.port is not None else default_port
+    
+    print(f"运行模式: {env_name} (端口 {port})")
+    app.run(debug=debug, host=args.host, port=port)

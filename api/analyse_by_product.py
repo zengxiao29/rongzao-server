@@ -103,12 +103,22 @@ def register_analyse_by_product_routes(app):
             
             # 处理让利后金额
             df['valid_amount'] = pd.to_numeric(df['让利后金额'], errors='coerce').fillna(0)
-
-            # 按日期分组汇总
-            daily_stats = df.groupby('date').agg({
-                'valid_quantity': 'sum',
-                'valid_amount': 'sum'
-            }).reset_index()
+            
+            # 识别渠道
+            def identify_channel(shop_type):
+                shop_type_str = str(shop_type) if pd.notna(shop_type) else ''
+                if '抖音' in shop_type_str or '今日头条' in shop_type_str or '鲁班' in shop_type_str:
+                    return '抖音'
+                elif '天猫' in shop_type_str:
+                    return '天猫'
+                elif '有赞' in shop_type_str:
+                    return '有赞'
+                elif '京东' in shop_type_str:
+                    return '京东'
+                else:
+                    return '其他'
+            
+            df['channel'] = df['店铺类型'].apply(identify_channel)
 
             # 生成完整的日期范围
             import datetime
@@ -121,17 +131,69 @@ def register_analyse_by_product_routes(app):
                 date_range.append(current_dt.strftime('%Y-%m-%d'))
                 current_dt += datetime.timedelta(days=1)
 
-            # 填充缺失的日期
-            sales_curve_data = {'dates': date_range, 'quantities': [], 'amounts': []}
+            # 初始化销售曲线数据结构（包含客单价）
+            sales_curve_data = {
+                'dates': date_range,
+                'overall': {
+                    'quantities': [],
+                    'amounts': [],
+                    'average_prices': []  # 新增：整体客单价
+                },
+                'channels': {
+                    '抖音': {'quantities': [], 'amounts': [], 'average_prices': []},  # 新增：抖音客单价
+                    '天猫': {'quantities': [], 'amounts': [], 'average_prices': []},  # 新增：天猫客单价
+                    '有赞': {'quantities': [], 'amounts': [], 'average_prices': []},  # 新增：有赞客单价
+                    '京东': {'quantities': [], 'amounts': [], 'average_prices': []}   # 新增：京东客单价
+                }
+            }
             
+            # 按日期和渠道分组汇总
+            daily_channel_stats = df.groupby(['date', 'channel']).agg({
+                'valid_quantity': 'sum',
+                'valid_amount': 'sum'
+            }).reset_index()
+            
+            # 按日期分组汇总（整体数据）
+            daily_overall_stats = df.groupby('date').agg({
+                'valid_quantity': 'sum',
+                'valid_amount': 'sum'
+            }).reset_index()
+            
+            # 填充数据并计算客单价
             for date in date_range:
-                day_data = daily_stats[daily_stats['date'] == date]
-                if len(day_data) > 0:
-                    sales_curve_data['quantities'].append(int(day_data['valid_quantity'].values[0]))
-                    sales_curve_data['amounts'].append(float(day_data['valid_amount'].values[0]))
+                # 整体数据
+                overall_day_data = daily_overall_stats[daily_overall_stats['date'] == date]
+                if len(overall_day_data) > 0:
+                    quantity = int(overall_day_data['valid_quantity'].values[0])
+                    amount = float(overall_day_data['valid_amount'].values[0])
+                    sales_curve_data['overall']['quantities'].append(quantity)
+                    sales_curve_data['overall']['amounts'].append(amount)
+                    # 计算整体客单价：金额 / 数量，四舍五入取整
+                    average_price = round(amount / quantity) if quantity > 0 else 0
+                    sales_curve_data['overall']['average_prices'].append(average_price)
                 else:
-                    sales_curve_data['quantities'].append(0)
-                    sales_curve_data['amounts'].append(0.0)
+                    sales_curve_data['overall']['quantities'].append(0)
+                    sales_curve_data['overall']['amounts'].append(0.0)
+                    sales_curve_data['overall']['average_prices'].append(0)
+                
+                # 各渠道数据
+                for channel in ['抖音', '天猫', '有赞', '京东']:
+                    channel_day_data = daily_channel_stats[
+                        (daily_channel_stats['date'] == date) & 
+                        (daily_channel_stats['channel'] == channel)
+                    ]
+                    if len(channel_day_data) > 0:
+                        quantity = int(channel_day_data['valid_quantity'].values[0])
+                        amount = float(channel_day_data['valid_amount'].values[0])
+                        sales_curve_data['channels'][channel]['quantities'].append(quantity)
+                        sales_curve_data['channels'][channel]['amounts'].append(amount)
+                        # 计算渠道客单价：金额 / 数量，四舍五入取整
+                        average_price = round(amount / quantity) if quantity > 0 else 0
+                        sales_curve_data['channels'][channel]['average_prices'].append(average_price)
+                    else:
+                        sales_curve_data['channels'][channel]['quantities'].append(0)
+                        sales_curve_data['channels'][channel]['amounts'].append(0.0)
+                        sales_curve_data['channels'][channel]['average_prices'].append(0)
 
             # 2. 计算客单价
             total_quantity = df['valid_quantity'].sum()
