@@ -37,24 +37,44 @@ def register_analyse_by_product_routes(app):
             conn = get_db_connection()
             cursor = conn.cursor()
 
+            # 先查询 ProductInfo 表，获取所有映射到该 mapped_title 的商品名称
+            cursor.execute('SELECT name FROM ProductInfo WHERE mapped_title = ?', (product_type,))
+            product_names = [row['name'] for row in cursor.fetchall()]
+
+            if not product_names:
+                conn.close()
+                return jsonify({
+                    'success': True,
+                    'product_type': product_type,
+                    'sales_curve': {'dates': [], 'quantities': [], 'amounts': []},
+                    'average_order_value': 0,
+                    'channel_sales': {'抖音': 0, '天猫': 0, '有赞': 0, '京东': 0}
+                })
+
+            print(f'找到 {len(product_names)} 个商品名称映射到 {product_type}: {product_names}')
+
             # 查询该商品在指定日期范围内的数据
-            query = '''
-                SELECT 
+            # 使用 IN 子句查询所有映射的商品名称
+            placeholders = ','.join(['?' for _ in product_names])
+            query = f'''
+                SELECT
                     付款时间,
                     订购数,
                     是否退款,
                     让利后金额,
                     店铺类型
                 FROM OrderDetails
-                WHERE 商品名称 = ?
-                  AND 付款时间 LIKE ?
+                WHERE 商品名称 IN ({placeholders})
+                  AND 付款时间 >= ?
+                  AND 付款时间 <= ?
                 ORDER BY 付款时间
             '''
 
-            # 构建日期匹配模式（匹配日期部分）
-            date_pattern = f'{start_date}%'
-            
-            cursor.execute(query, (product_type, date_pattern))
+            # 构建日期范围（包含完整的日期时间）
+            start_datetime = f'{start_date} 00:00:00'
+            end_datetime = f'{end_date} 23:59:59'
+
+            cursor.execute(query, product_names + [start_datetime, end_datetime])
             rows = cursor.fetchall()
 
             conn.close()
