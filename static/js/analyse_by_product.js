@@ -133,9 +133,6 @@ function renderSalesChart(salesCurveData) {
             height: 350,
             toolbar: {
                 show: false
-            },
-            padding: {
-                bottom: 20
             }
         },
         stroke: {
