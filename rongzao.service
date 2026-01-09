@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=root
+User=www-data
 WorkingDirectory=/root/rongzao-server
-ExecStart=/usr/bin/python3 /root/rongzao-server/app.py
+ExecStart=/root/rongzao-server/.venv/bin/python /root/rongzao-server/app.py
 Restart=always
 RestartSec=10
 
