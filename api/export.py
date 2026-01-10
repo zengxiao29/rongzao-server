@@ -10,7 +10,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
-from database import get_db_connection
+from dbpy.database import get_db_connection
 from utils_common import register_chinese_font
 from utils.auth import token_required
 from utils.operation_logger import log_operation

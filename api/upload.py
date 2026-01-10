@@ -2,7 +2,7 @@
 import pandas as pd
 import re
 from flask import jsonify, request, g
-from database import get_db_connection, calculate_record_hash
+from dbpy.database import get_db_connection, calculate_record_hash
 from utils.auth import token_required
 from utils.operation_logger import log_operation
 

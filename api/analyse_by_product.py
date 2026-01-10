@@ -7,7 +7,7 @@
 import sqlite3
 import pandas as pd
 from flask import jsonify, request
-from database import get_db_connection
+from dbpy.database import get_db_connection
 from utils.auth import token_required
 
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from flask import jsonify, request, g
 import bcrypt
-from database import get_db_connection
+from dbpy.database import get_db_connection
 from utils.auth import generate_token, verify_token, token_required
 from utils.operation_logger import log_operation
 

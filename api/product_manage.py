@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import jsonify, request, g
-from database import get_db_connection
+from dbpy.database import get_db_connection
 from utils.auth import token_required, role_required
 from utils.operation_logger import log_operation
 

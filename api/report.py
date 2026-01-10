@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from datetime import datetime, timedelta
 from flask import jsonify, request, g
-from database import get_db_connection
+from dbpy.database import get_db_connection
 from utils.auth import token_required
 from utils.operation_logger import log_operation
 

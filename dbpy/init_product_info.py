@@ -5,7 +5,7 @@
 """
 import json
 import os
-from database import get_db_connection
+from dbpy.database import get_db_connection
 
 
 def extract_alias(product_name):
