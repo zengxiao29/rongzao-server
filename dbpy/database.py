@@ -5,7 +5,11 @@ import os
 import pandas as pd
 import bcrypt
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'rongzao.db')
+# 数据库文件路径：指向项目根目录的rongzao.db
+# os.path.dirname(__file__) 是 dbpy 目录
+# os.path.dirname(os.path.dirname(__file__)) 是项目根目录
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+DB_PATH = os.path.join(PROJECT_ROOT, 'rongzao.db')
 
 
 def get_db_connection():
