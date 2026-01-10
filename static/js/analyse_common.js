@@ -80,11 +80,153 @@ async function loadAvailableDates() {
 }
 
 /**
+ * 显示加载状态
+ */
+function showLoading() {
+    // 防止重复创建
+    if (document.getElementById('tableLoadingOverlay')) {
+        return;
+    }
+    
+    const tableContainer = document.getElementById('tableContainer');
+    if (!tableContainer) {
+        console.warn('未找到表格容器，无法显示加载状态');
+        return;
+    }
+    
+    // 创建加载覆盖层
+    const overlay = document.createElement('div');
+    overlay.id = 'tableLoadingOverlay';
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        border-radius: 10px;
+    `;
+    
+    // 创建旋转图标
+    const spinner = document.createElement('div');
+    spinner.style.cssText = `
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+    `;
+    
+    // 创建加载文本
+    const text = document.createElement('div');
+    text.textContent = '正在加载数据...';
+    text.style.cssText = `
+        color: #333;
+        font-size: 14px;
+        font-weight: bold;
+    `;
+    
+    overlay.appendChild(spinner);
+    overlay.appendChild(text);
+    
+    // 添加旋转动画样式（如果不存在）
+    if (!document.querySelector('style#loading-spin-style')) {
+        const style = document.createElement('style');
+        style.id = 'loading-spin-style';
+        style.textContent = `
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // 设置表格容器为相对定位以便绝对定位覆盖层
+    if (window.getComputedStyle(tableContainer).position === 'static') {
+        tableContainer.style.position = 'relative';
+    }
+    
+    tableContainer.appendChild(overlay);
+    
+    // 禁用相关按钮
+    disableLoadingButtons(true);
+}
+
+/**
+ * 隐藏加载状态
+ */
+function hideLoading() {
+    const overlay = document.getElementById('tableLoadingOverlay');
+    if (overlay) {
+        overlay.remove();
+    }
+    
+    // 重新启用按钮
+    disableLoadingButtons(false);
+}
+
+/**
+ * 禁用或启用加载相关按钮
+ */
+function disableLoadingButtons(disabled) {
+    // 应用筛选按钮
+    const applyBtn = document.querySelector('.action-button.add-button[onclick="applyDateFilter()"]');
+    if (applyBtn) {
+        applyBtn.disabled = disabled;
+        applyBtn.style.opacity = disabled ? '0.6' : '1';
+        applyBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    }
+    
+    // 快捷日期按钮
+    const quickButtons = document.querySelectorAll('.quick-date-btn');
+    quickButtons.forEach(btn => {
+        btn.disabled = disabled;
+        btn.style.opacity = disabled ? '0.6' : '1';
+        btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    });
+    
+    // 报表按钮
+    const reportBtn = document.querySelector('.action-button.add-button[onclick="openReportPage()"]');
+    if (reportBtn) {
+        reportBtn.disabled = disabled;
+        reportBtn.style.opacity = disabled ? '0.6' : '1';
+        reportBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    }
+}
+
+/**
  * 从数据库加载数据
  * @param {boolean} showUnmatchedAlert - 是否显示未匹配商品的提示（默认 false）
  */
 async function loadDataFromDb(showUnmatchedAlert = false) {
+    let loadingTimeout = null;
+    let hasTimedOut = false;
+    
     try {
+        // 显示加载状态
+        showLoading();
+        
+        // 设置超时检测（15秒）
+        loadingTimeout = setTimeout(() => {
+            hasTimedOut = true;
+            const overlay = document.getElementById('tableLoadingOverlay');
+            if (overlay) {
+                const text = overlay.querySelector('div:last-child');
+                if (text) {
+                    text.textContent = '数据加载较慢，请耐心等待...';
+                    text.style.color = '#ff6b6b';
+                }
+            }
+        }, 15000);
+        
         const token = getToken();
         const headers = {
             'Content-Type': 'application/json',
@@ -137,6 +279,21 @@ async function loadDataFromDb(showUnmatchedAlert = false) {
     } catch (error) {
         console.error('加载数据失败:', error);
         alert('加载数据失败: ' + error.message);
+    } finally {
+        // 清除超时定时器
+        if (loadingTimeout) {
+            clearTimeout(loadingTimeout);
+        }
+        
+        // 隐藏加载状态
+        hideLoading();
+        
+        // 如果超时了，显示完成提示
+        if (hasTimedOut) {
+            setTimeout(() => {
+                alert('数据加载完成！如果经常遇到加载缓慢的情况，请检查网络连接或联系管理员。');
+            }, 300);
+        }
     }
 }
 

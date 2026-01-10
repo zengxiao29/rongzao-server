@@ -175,6 +175,7 @@ function renderDetailsSection(data) {
     // 缓存销售曲线数据（支持多渠道）
     chartDataCache.quantity = {
         dates: data.sales_curve.dates,
+        aggregation_level: data.aggregation_level || 'day', // 默认为day
         series: [
             {
                 name: '整体',
@@ -206,6 +207,7 @@ function renderDetailsSection(data) {
     
     chartDataCache.amount = {
         dates: data.sales_curve.dates,
+        aggregation_level: data.aggregation_level || 'day', // 默认为day
         series: [
             {
                 name: '整体',
@@ -238,6 +240,7 @@ function renderDetailsSection(data) {
     // 缓存客单价数据
     chartDataCache.average_price = {
         dates: data.sales_curve.dates,
+        aggregation_level: data.aggregation_level || 'day', // 默认为day
         series: [
             {
                 name: '整体',
@@ -435,6 +438,37 @@ function renderSalesChartByType(type) {
         };
     });
     
+    // 根据聚合级别计算标签样式
+    const aggregationLevel = chartData.aggregation_level || 'day';
+    let labelRotation = -30;
+    let labelFontSize = '11px';
+    
+    switch(aggregationLevel) {
+        case 'day':
+            labelRotation = -30;
+            labelFontSize = '11px';
+            break;
+        case 'week':
+            labelRotation = -45;
+            labelFontSize = '10px';
+            break;
+        case 'month':
+            labelRotation = -45;
+            labelFontSize = '10px';
+            break;
+        case 'quarter':
+            labelRotation = -45;
+            labelFontSize = '10px';
+            break;
+        case 'year':
+            labelRotation = 0; // 年份标签不需要旋转
+            labelFontSize = '12px'; // 年份标签可以大一些
+            break;
+        default:
+            labelRotation = -30;
+            labelFontSize = '11px';
+    }
+    
     // 创建新的图表
     const options = {
         series: processedSeries,
@@ -459,18 +493,64 @@ function renderSalesChartByType(type) {
         xaxis: {
             categories: chartData.dates,
             labels: {
-                rotate: -30,
+                rotate: labelRotation,
                 style: {
-                    fontSize: '11px'
+                    fontSize: labelFontSize
                 },
                 formatter: function(value) {
-                    // 将 "2024-01-15" 格式转换为 "01-15"
-                    if (value && typeof value === 'string' && value.includes('-')) {
-                        const parts = value.split('-');
-                        if (parts.length >= 3) {
-                            return parts[1] + '-' + parts[2];
+                    // 根据聚合级别格式化标签
+                    const level = chartData.aggregation_level || 'day';
+                    
+                    if (!value) return '';
+                    
+                    if (level === 'day') {
+                        // 按天显示：YYYY-MM-DD -> MM-DD
+                        if (typeof value === 'string' && value.includes('-')) {
+                            const parts = value.split('-');
+                            if (parts.length >= 3) {
+                                return parts[1] + '-' + parts[2];
+                            }
                         }
+                        return value;
                     }
+                    else if (level === 'week') {
+                        // 按周显示：YYYY-W01 -> 第01周
+                        if (typeof value === 'string' && value.includes('-W')) {
+                            const parts = value.split('-W');
+                            if (parts.length === 2) {
+                                return `第${parts[1]}周`;
+                            }
+                        }
+                        return value;
+                    }
+                    else if (level === 'month') {
+                        // 按月显示：YYYY-MM -> YYYY年MM月
+                        if (typeof value === 'string' && value.includes('-')) {
+                            const parts = value.split('-');
+                            if (parts.length >= 2) {
+                                return `${parts[0]}年${parts[1]}月`;
+                            }
+                        }
+                        return value;
+                    }
+                    else if (level === 'quarter') {
+                        // 按季度显示：YYYY-Q1 -> YYYY年Q1
+                        if (typeof value === 'string' && value.includes('-Q')) {
+                            const parts = value.split('-Q');
+                            if (parts.length === 2) {
+                                return `${parts[0]}年Q${parts[1]}`;
+                            }
+                        }
+                        return value;
+                    }
+                    else if (level === 'year') {
+                        // 按年显示：YYYY -> YYYY年
+                        if (typeof value === 'string' && value.length === 4) {
+                            return `${value}年`;
+                        }
+                        return value;
+                    }
+                    
                     return value;
                 }
             }
@@ -493,13 +573,59 @@ function renderSalesChartByType(type) {
         tooltip: {
             x: {
                 formatter: function(value) {
-                    // 将 "2024-01-15" 格式转换为 "01-15"
-                    if (value && typeof value === 'string' && value.includes('-')) {
-                        const parts = value.split('-');
-                        if (parts.length >= 3) {
-                            return parts[1] + '-' + parts[2];
+                    // 根据聚合级别显示完整的日期信息
+                    const level = chartData.aggregation_level || 'day';
+                    
+                    if (!value) return '';
+                    
+                    if (level === 'day') {
+                        // 按天显示：YYYY-MM-DD -> YYYY年MM月DD日
+                        if (typeof value === 'string' && value.includes('-')) {
+                            const parts = value.split('-');
+                            if (parts.length >= 3) {
+                                return `${parts[0]}年${parts[1]}月${parts[2]}日`;
+                            }
                         }
+                        return value;
                     }
+                    else if (level === 'week') {
+                        // 按周显示：YYYY-W01 -> YYYY年第01周
+                        if (typeof value === 'string' && value.includes('-W')) {
+                            const parts = value.split('-W');
+                            if (parts.length === 2) {
+                                return `${parts[0]}年第${parts[1]}周`;
+                            }
+                        }
+                        return value;
+                    }
+                    else if (level === 'month') {
+                        // 按月显示：YYYY-MM -> YYYY年MM月
+                        if (typeof value === 'string' && value.includes('-')) {
+                            const parts = value.split('-');
+                            if (parts.length >= 2) {
+                                return `${parts[0]}年${parts[1]}月`;
+                            }
+                        }
+                        return value;
+                    }
+                    else if (level === 'quarter') {
+                        // 按季度显示：YYYY-Q1 -> YYYY年第1季度
+                        if (typeof value === 'string' && value.includes('-Q')) {
+                            const parts = value.split('-Q');
+                            if (parts.length === 2) {
+                                return `${parts[0]}年第${parts[1]}季度`;
+                            }
+                        }
+                        return value;
+                    }
+                    else if (level === 'year') {
+                        // 按年显示：YYYY -> YYYY年
+                        if (typeof value === 'string' && value.length === 4) {
+                            return `${value}年`;
+                        }
+                        return value;
+                    }
+                    
                     return value;
                 }
             },

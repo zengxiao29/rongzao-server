@@ -33,6 +33,28 @@ def register_analyse_by_product_routes(app):
 
             print(f'获取商品详情: {product_type}, 日期范围: {start_date} ~ {end_date}, 数据类型: {data_type}')
 
+            # 计算聚合级别
+            import datetime
+            start_dt = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+            days_diff = (end_dt - start_dt).days
+            
+            # 确定聚合级别
+            def determine_aggregation_level(days):
+                if days <= 30:      # 1个月内：按天显示
+                    return 'day'
+                elif days <= 90:    # 1-3个月：按周显示
+                    return 'week'
+                elif days <= 912:   # 两年半以内：按月显示
+                    return 'month'
+                elif days <= 1825:  # 两年半到五年：按季度显示
+                    return 'quarter'
+                else:               # 五年以上：按年显示
+                    return 'year'
+            
+            aggregation_level = determine_aggregation_level(days_diff)
+            print(f'日期范围: {days_diff}天, 聚合级别: {aggregation_level}')
+
             # 连接数据库
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -46,7 +68,17 @@ def register_analyse_by_product_routes(app):
                 return jsonify({
                     'success': True,
                     'product_type': product_type,
-                    'sales_curve': {'dates': [], 'quantities': [], 'amounts': []},
+                    'aggregation_level': aggregation_level,
+                    'sales_curve': {
+                        'dates': [],
+                        'overall': {'quantities': [], 'amounts': [], 'average_prices': []},
+                        'channels': {
+                            '抖音': {'quantities': [], 'amounts': [], 'average_prices': []},
+                            '天猫': {'quantities': [], 'amounts': [], 'average_prices': []},
+                            '有赞': {'quantities': [], 'amounts': [], 'average_prices': []},
+                            '京东': {'quantities': [], 'amounts': [], 'average_prices': []}
+                        }
+                    },
                     'average_order_value': 0,
                     'channel_sales': {'抖音': 0, '天猫': 0, '有赞': 0, '京东': 0}
                 })
@@ -86,7 +118,17 @@ def register_analyse_by_product_routes(app):
                 return jsonify({
                     'success': True,
                     'product_type': product_type,
-                    'sales_curve': {'dates': [], 'quantities': [], 'amounts': []},
+                    'aggregation_level': aggregation_level,
+                    'sales_curve': {
+                        'dates': [],
+                        'overall': {'quantities': [], 'amounts': [], 'average_prices': []},
+                        'channels': {
+                            '抖音': {'quantities': [], 'amounts': [], 'average_prices': []},
+                            '天猫': {'quantities': [], 'amounts': [], 'average_prices': []},
+                            '有赞': {'quantities': [], 'amounts': [], 'average_prices': []},
+                            '京东': {'quantities': [], 'amounts': [], 'average_prices': []}
+                        }
+                    },
                     'average_order_value': 0,
                     'channel_sales': {'抖音': 0, '天猫': 0, '有赞': 0, '京东': 0}
                 })
@@ -120,80 +162,167 @@ def register_analyse_by_product_routes(app):
             
             df['channel'] = df['店铺类型'].apply(identify_channel)
 
-            # 生成完整的日期范围
-            import datetime
-            start_dt = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-            end_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+            # 根据聚合级别生成日期标签和映射函数
+            def get_aggregation_functions(level):
+                """返回聚合级别对应的标签生成器和日期映射函数"""
+                if level == 'day':
+                    # 按天：YYYY-MM-DD
+                    def generate_labels(start, end):
+                        labels = []
+                        current = start
+                        while current <= end:
+                            labels.append(current.strftime('%Y-%m-%d'))
+                            current += datetime.timedelta(days=1)
+                        return labels
+                    
+                    def map_date(date_str):
+                        return date_str  # 直接返回日期字符串
+                    
+                    return generate_labels, map_date
+                
+                elif level == 'week':
+                    # 按周：YYYY-WWW (如2024-W01)
+                    def generate_labels(start, end):
+                        labels = []
+                        current = start
+                        # 找到第一个周一的日期
+                        while current.weekday() != 0:  # 0代表周一
+                            current -= datetime.timedelta(days=1)
+                        
+                        while current <= end:
+                            year = current.year
+                            week_num = current.isocalendar()[1]
+                            labels.append(f'{year}-W{week_num:02d}')
+                            current += datetime.timedelta(weeks=1)
+                        return labels
+                    
+                    def map_date(date_str):
+                        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+                        year = date_obj.year
+                        week_num = date_obj.isocalendar()[1]
+                        return f'{year}-W{week_num:02d}'
+                    
+                    return generate_labels, map_date
+                
+                elif level == 'month':
+                    # 按月：YYYY-MM
+                    def generate_labels(start, end):
+                        labels = []
+                        current = datetime.datetime(start.year, start.month, 1)
+                        while current <= end:
+                            labels.append(current.strftime('%Y-%m'))
+                            # 下个月
+                            if current.month == 12:
+                                current = datetime.datetime(current.year + 1, 1, 1)
+                            else:
+                                current = datetime.datetime(current.year, current.month + 1, 1)
+                        return labels
+                    
+                    def map_date(date_str):
+                        return date_str[:7]  # 取前7位 YYYY-MM
+                    
+                    return generate_labels, map_date
+                
+                elif level == 'quarter':
+                    # 按季度：YYYY-Q1 (季度1-4)
+                    def generate_labels(start, end):
+                        labels = []
+                        current = datetime.datetime(start.year, ((start.month - 1) // 3) * 3 + 1, 1)
+                        while current <= end:
+                            quarter = (current.month - 1) // 3 + 1
+                            labels.append(f'{current.year}-Q{quarter}')
+                            # 下个季度
+                            if current.month in [10, 11, 12]:  # 第四季度
+                                current = datetime.datetime(current.year + 1, 1, 1)
+                            else:
+                                current = datetime.datetime(current.year, current.month + 3, 1)
+                        return labels
+                    
+                    def map_date(date_str):
+                        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+                        quarter = (date_obj.month - 1) // 3 + 1
+                        return f'{date_obj.year}-Q{quarter}'
+                    
+                    return generate_labels, map_date
+                
+                else:  # 'year'
+                    # 按年：YYYY
+                    def generate_labels(start, end):
+                        labels = []
+                        for year in range(start.year, end.year + 1):
+                            labels.append(str(year))
+                        return labels
+                    
+                    def map_date(date_str):
+                        return date_str[:4]  # 取前4位 YYYY
+                    
+                    return generate_labels, map_date
             
-            date_range = []
-            current_dt = start_dt
-            while current_dt <= end_dt:
-                date_range.append(current_dt.strftime('%Y-%m-%d'))
-                current_dt += datetime.timedelta(days=1)
-
-            # 初始化销售曲线数据结构（包含客单价）
+            # 生成聚合标签
+            generate_labels, map_date = get_aggregation_functions(aggregation_level)
+            aggregation_labels = generate_labels(start_dt, end_dt)
+            
+            # 初始化销售曲线数据结构
             sales_curve_data = {
-                'dates': date_range,
+                'dates': aggregation_labels,  # 使用聚合标签
                 'overall': {
-                    'quantities': [],
-                    'amounts': [],
-                    'average_prices': []  # 新增：整体客单价
+                    'quantities': [0] * len(aggregation_labels),
+                    'amounts': [0.0] * len(aggregation_labels),
+                    'average_prices': [0] * len(aggregation_labels)
                 },
                 'channels': {
-                    '抖音': {'quantities': [], 'amounts': [], 'average_prices': []},  # 新增：抖音客单价
-                    '天猫': {'quantities': [], 'amounts': [], 'average_prices': []},  # 新增：天猫客单价
-                    '有赞': {'quantities': [], 'amounts': [], 'average_prices': []},  # 新增：有赞客单价
-                    '京东': {'quantities': [], 'amounts': [], 'average_prices': []}   # 新增：京东客单价
+                    '抖音': {'quantities': [0] * len(aggregation_labels), 'amounts': [0.0] * len(aggregation_labels), 'average_prices': [0] * len(aggregation_labels)},
+                    '天猫': {'quantities': [0] * len(aggregation_labels), 'amounts': [0.0] * len(aggregation_labels), 'average_prices': [0] * len(aggregation_labels)},
+                    '有赞': {'quantities': [0] * len(aggregation_labels), 'amounts': [0.0] * len(aggregation_labels), 'average_prices': [0] * len(aggregation_labels)},
+                    '京东': {'quantities': [0] * len(aggregation_labels), 'amounts': [0.0] * len(aggregation_labels), 'average_prices': [0] * len(aggregation_labels)}
                 }
             }
             
-            # 按日期和渠道分组汇总
-            daily_channel_stats = df.groupby(['date', 'channel']).agg({
-                'valid_quantity': 'sum',
-                'valid_amount': 'sum'
-            }).reset_index()
-            
-            # 按日期分组汇总（整体数据）
-            daily_overall_stats = df.groupby('date').agg({
-                'valid_quantity': 'sum',
-                'valid_amount': 'sum'
-            }).reset_index()
-            
-            # 填充数据并计算客单价
-            for date in date_range:
-                # 整体数据
-                overall_day_data = daily_overall_stats[daily_overall_stats['date'] == date]
-                if len(overall_day_data) > 0:
-                    quantity = int(overall_day_data['valid_quantity'].values[0])
-                    amount = float(overall_day_data['valid_amount'].values[0])
-                    sales_curve_data['overall']['quantities'].append(quantity)
-                    sales_curve_data['overall']['amounts'].append(amount)
-                    # 计算整体客单价：金额 / 数量，四舍五入取整
-                    average_price = round(amount / quantity) if quantity > 0 else 0
-                    sales_curve_data['overall']['average_prices'].append(average_price)
-                else:
-                    sales_curve_data['overall']['quantities'].append(0)
-                    sales_curve_data['overall']['amounts'].append(0.0)
-                    sales_curve_data['overall']['average_prices'].append(0)
+            # 创建标签到索引的映射
+            label_to_index = {label: idx for idx, label in enumerate(aggregation_labels)}
+
+            # 使用新的聚合逻辑填充数据
+            # 遍历DataFrame的每一行，将数据累加到对应的聚合标签
+            for _, row in df.iterrows():
+                date_str = row['date']
+                quantity = row['valid_quantity']
+                amount = row['valid_amount']
+                channel = row['channel']
                 
-                # 各渠道数据
+                # 将日期映射到聚合标签
+                aggregation_label = map_date(date_str)
+                
+                # 检查标签是否在映射中（可能在边界情况）
+                if aggregation_label in label_to_index:
+                    idx = label_to_index[aggregation_label]
+                    
+                    # 整体数据累加
+                    sales_curve_data['overall']['quantities'][idx] += quantity
+                    sales_curve_data['overall']['amounts'][idx] += amount
+                    
+                    # 渠道数据累加
+                    if channel in ['抖音', '天猫', '有赞', '京东']:
+                        sales_curve_data['channels'][channel]['quantities'][idx] += quantity
+                        sales_curve_data['channels'][channel]['amounts'][idx] += amount
+            
+            # 计算客单价（每个聚合区间）
+            for idx in range(len(aggregation_labels)):
+                # 整体客单价
+                overall_quantity = sales_curve_data['overall']['quantities'][idx]
+                overall_amount = sales_curve_data['overall']['amounts'][idx]
+                if overall_quantity > 0:
+                    sales_curve_data['overall']['average_prices'][idx] = round(overall_amount / overall_quantity)
+                else:
+                    sales_curve_data['overall']['average_prices'][idx] = 0
+                
+                # 各渠道客单价
                 for channel in ['抖音', '天猫', '有赞', '京东']:
-                    channel_day_data = daily_channel_stats[
-                        (daily_channel_stats['date'] == date) & 
-                        (daily_channel_stats['channel'] == channel)
-                    ]
-                    if len(channel_day_data) > 0:
-                        quantity = int(channel_day_data['valid_quantity'].values[0])
-                        amount = float(channel_day_data['valid_amount'].values[0])
-                        sales_curve_data['channels'][channel]['quantities'].append(quantity)
-                        sales_curve_data['channels'][channel]['amounts'].append(amount)
-                        # 计算渠道客单价：金额 / 数量，四舍五入取整
-                        average_price = round(amount / quantity) if quantity > 0 else 0
-                        sales_curve_data['channels'][channel]['average_prices'].append(average_price)
+                    channel_quantity = sales_curve_data['channels'][channel]['quantities'][idx]
+                    channel_amount = sales_curve_data['channels'][channel]['amounts'][idx]
+                    if channel_quantity > 0:
+                        sales_curve_data['channels'][channel]['average_prices'][idx] = round(channel_amount / channel_quantity)
                     else:
-                        sales_curve_data['channels'][channel]['quantities'].append(0)
-                        sales_curve_data['channels'][channel]['amounts'].append(0.0)
-                        sales_curve_data['channels'][channel]['average_prices'].append(0)
+                        sales_curve_data['channels'][channel]['average_prices'][idx] = 0
 
             # 2. 计算客单价
             total_quantity = df['valid_quantity'].sum()
@@ -219,6 +348,7 @@ def register_analyse_by_product_routes(app):
             return jsonify({
                 'success': True,
                 'product_type': product_type,
+                'aggregation_level': aggregation_level,
                 'sales_curve': sales_curve_data,
                 'average_order_value': round(average_order_value, 2),
                 'channel_sales': channel_sales
