@@ -11,6 +11,7 @@ def register_upload_routes(app):
     """注册上传相关 API 路由"""
 
     @app.route('/api/analyse/upload', methods=['POST'])
+    @token_required
     def analyse_upload():
         """处理 Excel 文件上传并上传到数据库"""
         print('收到 analyse 文件上传请求')
@@ -36,6 +37,7 @@ def register_upload_routes(app):
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/upload', methods=['POST'])
+    @token_required
     def upload_file():
         """处理Excel文件上传"""
         print('收到文件上传请求')

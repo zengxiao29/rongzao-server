@@ -20,11 +20,7 @@ let searchColumn = 'name'; // name, alias, category, mapped_title
 let currentSortColumn = -1;
 let currentSortDirection = 'desc'; // 'asc' 或 'desc'
 
-// 权限控制
-let isAuthorized = false;
-let authorizationExpiry = null;
-const AUTH_PASSWORD = 'xl12345678xl';
-const AUTH_DURATION = 24 * 60 * 60 * 1000; // 24小时
+
 
 // 正在编辑的单元格
 let editingCell = null;
@@ -239,33 +235,9 @@ function goToPage(page) {
     loadProducts();
 }
 
-/**
- * 检查权限是否过期
- */
-function checkAuthorizationExpiry() {
-    if (!authorizationExpiry) return false;
-    return Date.now() < authorizationExpiry;
-}
 
-/**
- * 请求权限验证
- */
-async function requestAuthorization() {
-    // 检查权限是否已授权且未过期
-    if (isAuthorized && checkAuthorizationExpiry()) {
-        return true;
-    }
 
-    const password = prompt('请输入编辑密码：');
-    if (password === AUTH_PASSWORD) {
-        isAuthorized = true;
-        authorizationExpiry = Date.now() + AUTH_DURATION;
-        return true;
-    } else {
-        alert('密码错误，无法进入编辑模式');
-        return false;
-    }
-}
+
 
 /**
  * 进入编辑模式
