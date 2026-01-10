@@ -1048,16 +1048,16 @@
     <div class="upload-modal" id="inventoryUploadModal" style="display: none;">
         <div class="upload-modal-content">
             <div class="upload-modal-header">
-                <h2>上传库存Excel</h2>
+                <h2>上传库存CSV</h2>
                 <button class="close-button" onclick="closeInventoryUploadModal()">×</button>
             </div>
             <div class="upload-modal-body">
                 <div class="upload-area" id="inventoryUploadArea">
                     <div class="upload-icon">📦</div>
-                    <p class="upload-text">拖拽Excel文件到此处，或</p>
-                    <input type="file" id="inventoryFileInput" accept=".xlsx,.xls" style="display: none;">
+                    <p class="upload-text">拖拽CSV文件到此处，或</p>
+                    <input type="file" id="inventoryFileInput" accept=".csv,.txt" style="display: none;">
                     <button class="upload-btn" onclick="document.getElementById('inventoryFileInput').click()">选择文件</button>
-                    <p class="upload-hint">支持 .xlsx 和 .xls 格式</p>
+                    <p class="upload-hint">支持 .csv 和 .txt 格式</p>
                 </div>
                 <div class="upload-result" id="inventoryUploadResult" style="display: none;">
                     <p id="inventoryUploadResultText"></p>

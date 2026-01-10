@@ -184,6 +184,38 @@ def register_analyse_routes(app):
                         'jd_amount': row['jd_amount']
                     }
                 
+                # 计算每个 mapped_title 的库存总量
+                print("开始计算库存总量...")
+                inventory_stats = {}
+                
+                # 获取所有 mapped_title
+                all_mapped_titles = set(mapped_title_stats.keys())
+                
+                # 对于每个 mapped_title，查询对应的商品名称
+                for mapped_title in all_mapped_titles:
+                    # 查询映射到该 mapped_title 的所有商品名称
+                    cursor.execute('SELECT name FROM ProductInfo WHERE mapped_title = ?', (mapped_title,))
+                    product_names = [row['name'] for row in cursor.fetchall()]
+                    
+                    if product_names:
+                        # 构建 IN 查询，计算库存总量
+                        placeholders = ','.join(['?'] * len(product_names))
+                        inventory_sql = f'''
+                            SELECT COALESCE(SUM(数量), 0) as total_inventory 
+                            FROM Inventory 
+                            WHERE 商品名称 IN ({placeholders})
+                        '''
+                        cursor.execute(inventory_sql, product_names)
+                        result = cursor.fetchone()
+                        total_inventory = result['total_inventory'] if result else 0
+                    else:
+                        total_inventory = 0
+                    
+                    inventory_stats[mapped_title] = total_inventory
+                    print(f"  {mapped_title}: {len(product_names)} 个商品，库存总量 = {total_inventory}")
+                
+                print(f"库存计算完成，共统计 {len(inventory_stats)} 个商品类型")
+                
                 # 统计未匹配的商品名称（通过对比原始数据）
                 # 获取所有有映射的商品名称
                 mapped_product_names = set(product_full_mapping.keys())
@@ -259,7 +291,8 @@ def register_analyse_routes(app):
                                 'youzan_orders': int(stats.get('youzan_orders', 0)),
                                 'youzan_amount': float(stats.get('youzan_amount', 0)),
                                 'jd_orders': int(stats.get('jd_orders', 0)),
-                                'jd_amount': float(stats.get('jd_amount', 0))
+                                'jd_amount': float(stats.get('jd_amount', 0)),
+                                'inventory': int(inventory_stats.get(product_type, 0))  # 添加库存字段
                             }
                             for product_type, stats in type_stats.items()
                         ]

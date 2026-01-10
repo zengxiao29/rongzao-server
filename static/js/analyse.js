@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // 设置文件上传
     setupFileUpload();
+    setupInventoryFileUpload();
 
     // 加载可用的日期
     await loadAvailableDates();
@@ -229,6 +230,7 @@ function renderPCTable(data, container) {
     let totalJdOrders = 0;
     let totalJdAmount = 0;
     let totalDiscountAmount = 0;
+    let totalInventory = 0;
 
     data.forEach(item => {
         totalValidOrders += item.valid_orders;
@@ -241,6 +243,7 @@ function renderPCTable(data, container) {
         totalJdOrders += item.jd_orders;
         totalJdAmount += item.jd_amount;
         totalDiscountAmount += item.discount_amount;
+        totalInventory += item.inventory || 0;
     });
 
     let containerHTML = `
@@ -273,6 +276,10 @@ function renderPCTable(data, container) {
                             让利后金额
                             <button class="sort-btn" data-column="6" onclick="sortTable(6)">▼</button>
                         </th>
+                        <th>
+                            库存
+                            <button class="sort-btn" data-column="7" onclick="sortTable(7)">▼</button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -288,6 +295,7 @@ function renderPCTable(data, container) {
                 <td>${item.youzan_orders}</td>
                 <td>${item.jd_orders}${item.jd_orders > 0 ? `<span style="color: #999;">\t<i>¥${calculateAOV(item.jd_orders, item.jd_amount)}</i></span>` : ''}</td>
                 <td>¥${parseFloat(item.discount_amount).toFixed(2)}</td>
+                <td>${item.inventory || 0}</td>
             </tr>
         `;
     });
@@ -302,6 +310,7 @@ function renderPCTable(data, container) {
                 <td>${totalYouzanOrders}</td>
                 <td>${totalJdOrders}${totalJdOrders > 0 ? `<span style="color: #999;">\t<i>¥${calculateAOV(totalJdOrders, totalJdAmount)}</i></span>` : ''}</td>
                 <td>¥${totalDiscountAmount.toFixed(2)}</td>
+                <td>${totalInventory}</td>
             </tr>
     `;
 
@@ -392,6 +401,7 @@ function renderMobileCards(data, container) {
     let totalYouzanOrders = 0;
     let totalJdOrders = 0;
     let totalDiscountAmount = 0;
+    let totalInventory = 0;
 
     data.forEach(item => {
         totalValidOrders += item.valid_orders;
@@ -400,6 +410,7 @@ function renderMobileCards(data, container) {
         totalYouzanOrders += item.youzan_orders;
         totalJdOrders += item.jd_orders;
         totalDiscountAmount += item.discount_amount;
+        totalInventory += item.inventory || 0;
     });
 
     let containerHTML = '<div class="mobile-cards">';
@@ -432,6 +443,10 @@ function renderMobileCards(data, container) {
                     <span class="mobile-card-label">让利后金额</span>
                     <span class="mobile-card-value highlight">¥${parseFloat(item.discount_amount).toFixed(2)}</span>
                 </div>
+                <div class="mobile-card-item">
+                    <span class="mobile-card-label">库存</span>
+                    <span class="mobile-card-value">${item.inventory || 0}</span>
+                </div>
             </div>
         `;
     });
@@ -463,6 +478,10 @@ function renderMobileCards(data, container) {
             <div class="mobile-card-item">
                 <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">让利后金额</span>
                 <span class="mobile-card-value" style="color: white;">¥${totalDiscountAmount.toFixed(2)}</span>
+            </div>
+            <div class="mobile-card-item">
+                <span class="mobile-card-label" style="color: rgba(255, 255, 255, 0.8);">库存</span>
+                <span class="mobile-card-value" style="color: white;">${totalInventory}</span>
             </div>
         </div>
     `;
@@ -778,5 +797,128 @@ function handleTableRowClick(row) {
         loadProductDetails(productType, startDate, endDate);
     } else {
         console.error('loadProductDetails 函数未定义');
+    }
+}
+
+/**
+ * 设置库存文件上传
+ */
+function setupInventoryFileUpload() {
+    const uploadArea = document.getElementById('inventoryUploadArea');
+    const fileInput = document.getElementById('inventoryFileInput');
+
+    if (!uploadArea || !fileInput) {
+        console.warn('库存上传元素未找到');
+        return;
+    }
+
+    // 文件选择
+    fileInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            handleInventoryFileUpload(file);
+        }
+    };
+
+    // 拖拽上传
+    uploadArea.ondragover = function(e) {
+        e.preventDefault();
+        uploadArea.style.background = '#f0f9ff';
+    };
+
+    uploadArea.ondragleave = function(e) {
+        e.preventDefault();
+        uploadArea.style.background = '';
+    };
+
+    uploadArea.ondrop = function(e) {
+        e.preventDefault();
+        uploadArea.style.background = '';
+
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            handleInventoryFileUpload(file);
+        }
+    };
+}
+
+/**
+ * 处理库存文件上传
+ */
+async function handleInventoryFileUpload(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const token = getToken();
+        const headers = {};
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // 显示上传中状态
+        const uploadResult = document.getElementById('inventoryUploadResult');
+        uploadResult.style.display = 'block';
+        uploadResult.querySelector('p').textContent = '正在上传库存文件...';
+        uploadResult.style.color = '#666';
+
+        const response = await fetch('/api/upload/inventory', {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+
+        // 检查是否需要重新登录
+        if (response.status === 401) {
+            // 清除过期的 token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            window.location.href = '/login';
+            return;
+        }
+
+        const result = await response.json();
+
+        if (response.ok) {
+            let message = `上传完成！ 文件总行数: ${result.total} 新增记录: ${result.inserted} 更新记录: ${result.updated} 失败记录: ${result.failed}`;
+            
+            uploadResult.querySelector('p').textContent = message;
+            // 根据失败记录数量设置颜色：有失败记录时显示红色，否则显示绿色
+            if (result.failed > 0) {
+                uploadResult.style.color = '#dc3545';
+            } else {
+                uploadResult.style.color = '#28a745';
+            }
+
+            // 检查是否有警告信息
+            if (result.warning) {
+                const warningDiv = document.createElement('div');
+                warningDiv.style.backgroundColor = '#fff3cd';
+                warningDiv.style.border = '1px solid #ffc107';
+                warningDiv.style.color = '#856404';
+                warningDiv.style.padding = '10px 15px';
+                warningDiv.style.marginTop = '10px';
+                warningDiv.style.borderRadius = '5px';
+                warningDiv.textContent = '⚠️ ' + result.warning;
+                uploadResult.appendChild(warningDiv);
+            }
+
+
+            
+        } else {
+            uploadResult.querySelector('p').textContent = '库存上传失败: ' + result.error;
+            uploadResult.style.color = '#dc3545';
+            alert('库存上传失败: ' + result.error);
+        }
+    } catch (error) {
+        console.error('库存上传失败:', error);
+        const uploadResult = document.getElementById('inventoryUploadResult');
+        uploadResult.style.display = 'block';
+        uploadResult.querySelector('p').textContent = '库存上传失败: ' + error.message;
+        uploadResult.style.color = '#dc3545';
+        alert('库存上传失败: ' + error.message);
     }
 }
