@@ -81,6 +81,9 @@ cat > "$TEMP_DIR/README.md" << EOF
 3. 数据库文件权限设置为 644
 4. 建议使用 Nginx 反向代理
 5. 定期备份数据库文件
+6. 数据库已启用SQLCipher加密，确保设置正确的DB_ENCRYPTION_KEY环境变量
+7. 加密密钥丢失将导致数据无法访问，请妥善保管并备份
+8. 使用DB Browser等工具打开数据库时，请选择SQLCipher模式并输入正确的加密密钥
 
 ## 维护
 

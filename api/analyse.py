@@ -43,8 +43,19 @@ def register_analyse_routes(app):
                 product_mapping = {row['name']: row['mapped_title'] for row in cursor.fetchall()}
                 print(f'读取到 {len(product_mapping)} 条商品映射规则')
 
-                # 构建SQL查询
-                sql = 'SELECT * FROM OrderDetails WHERE 付款时间 IS NOT NULL AND 付款时间 != "NaT"'
+                # 构建SQL查询 - 只选择必要字段，在数据库端过滤退款订单
+                sql = '''
+                    SELECT 
+                        商品名称,
+                        付款时间,
+                        订购数,
+                        让利后金额,
+                        店铺类型,
+                        是否退款
+                    FROM OrderDetails 
+                    WHERE 付款时间 IS NOT NULL AND 付款时间 != "NaT"
+                      AND ((是否退款 != '退款成功' AND 是否退款 != '退款中') OR 是否退款 IS NULL)
+                '''
                 params = []
 
                 if start_date:
@@ -62,13 +73,9 @@ def register_analyse_routes(app):
                 rows = cursor.fetchall()
 
                 # 转换为DataFrame
-                df = pd.DataFrame(rows, columns=columns)
+                df_filtered = pd.DataFrame(rows, columns=columns)
 
-                print(f'从数据库读取到 {len(df)} 条记录')
-
-                # 过滤掉退款的订单（与PDF导出保持一致的逻辑）
-                df_filtered = df[(df['是否退款'] != '退款成功') & (df['是否退款'] != '退款中') | (df['是否退款'].isna())].copy()
-                print(f'过滤退款后剩余 {len(df_filtered)} 行数据')
+                print(f'从数据库读取到 {len(df_filtered)} 条有效记录（已过滤退款）')
 
                 # 记录未匹配的商品名称
                 unmatched_products = set()
@@ -83,80 +90,113 @@ def register_analyse_routes(app):
                         'category': row['category']
                     }
 
-                # 按mapped_title分组统计
+                # 使用SQL GROUP BY进行聚合统计，提升性能
+                print("开始SQL聚合统计...")
+                
+                # 构建SQL聚合查询
+                aggregation_sql = '''
+                    SELECT 
+                        p.mapped_title,
+                        p.category,
+                        COALESCE(SUM(o.订购数), 0) as valid_orders,
+                        COALESCE(SUM(o.让利后金额), 0) as discount_amount,
+                        -- 抖音渠道统计
+                        COALESCE(SUM(CASE 
+                            WHEN (o.店铺类型 LIKE '%抖音%' OR o.店铺类型 LIKE '%今日头条%' OR o.店铺类型 LIKE '%鲁班%')
+                            THEN o.订购数 ELSE 0 
+                        END), 0) as douyin_orders,
+                        COALESCE(SUM(CASE 
+                            WHEN (o.店铺类型 LIKE '%抖音%' OR o.店铺类型 LIKE '%今日头条%' OR o.店铺类型 LIKE '%鲁班%')
+                            THEN o.让利后金额 ELSE 0 
+                        END), 0) as douyin_amount,
+                        -- 天猫渠道统计
+                        COALESCE(SUM(CASE 
+                            WHEN o.店铺类型 LIKE '%天猫%'
+                            THEN o.订购数 ELSE 0 
+                        END), 0) as tmall_orders,
+                        COALESCE(SUM(CASE 
+                            WHEN o.店铺类型 LIKE '%天猫%'
+                            THEN o.让利后金额 ELSE 0 
+                        END), 0) as tmall_amount,
+                        -- 有赞渠道统计
+                        COALESCE(SUM(CASE 
+                            WHEN o.店铺类型 LIKE '%有赞%'
+                            THEN o.订购数 ELSE 0 
+                        END), 0) as youzan_orders,
+                        COALESCE(SUM(CASE 
+                            WHEN o.店铺类型 LIKE '%有赞%'
+                            THEN o.让利后金额 ELSE 0 
+                        END), 0) as youzan_amount,
+                        -- 京东渠道统计
+                        COALESCE(SUM(CASE 
+                            WHEN o.店铺类型 LIKE '%京东%'
+                            THEN o.订购数 ELSE 0 
+                        END), 0) as jd_orders,
+                        COALESCE(SUM(CASE 
+                            WHEN o.店铺类型 LIKE '%京东%'
+                            THEN o.让利后金额 ELSE 0 
+                        END), 0) as jd_amount
+                    FROM OrderDetails o
+                    LEFT JOIN ProductInfo p ON o.商品名称 = p.name
+                    WHERE o.付款时间 IS NOT NULL AND o.付款时间 != "NaT"
+                      AND ((o.是否退款 != '退款成功' AND o.是否退款 != '退款中') OR o.是否退款 IS NULL)
+                '''
+                
+                # 为聚合查询创建独立的参数列表
+                aggregation_params = []
+                
+                # 添加日期范围条件
+                if start_date:
+                    aggregation_sql += ' AND o.付款时间 >= ?'
+                    aggregation_params.append(start_date)
+                
+                if end_date:
+                    aggregation_sql += ' AND o.付款时间 <= ?'
+                    aggregation_params.append(f'{end_date} 23:59:59')
+                
+                aggregation_sql += '''
+                    GROUP BY p.mapped_title, p.category
+                    HAVING p.mapped_title IS NOT NULL AND p.mapped_title != ""
+                    ORDER BY p.category, p.mapped_title
+                '''
+                
+                # 执行聚合查询
+                cursor.execute(aggregation_sql, aggregation_params)
+                aggregation_results = cursor.fetchall()
+                
+                # 构建mapped_title_stats字典（与原有结构兼容）
                 mapped_title_stats = {}
-
-                print("开始处理数据...")
+                for row in aggregation_results:
+                    mapped_title = row['mapped_title']
+                    category_id = row['category']
+                    
+                    mapped_title_stats[mapped_title] = {
+                        'category': category_id,
+                        'valid_orders': row['valid_orders'],
+                        'discount_amount': row['discount_amount'],
+                        'douyin_orders': row['douyin_orders'],
+                        'douyin_amount': row['douyin_amount'],
+                        'tmall_orders': row['tmall_orders'],
+                        'tmall_amount': row['tmall_amount'],
+                        'youzan_orders': row['youzan_orders'],
+                        'youzan_amount': row['youzan_amount'],
+                        'jd_orders': row['jd_orders'],
+                        'jd_amount': row['jd_amount']
+                    }
+                
+                # 统计未匹配的商品名称（通过对比原始数据）
+                # 获取所有有映射的商品名称
+                mapped_product_names = set(product_full_mapping.keys())
+                
+                # 检查df_filtered中的商品名称哪些没有映射
                 for idx, row in df_filtered.iterrows():
                     product_name = row['商品名称']
-
-                    # 查找商品映射
-                    product_info = product_full_mapping.get(product_name)
-
-                    if product_info is None or product_info['mapped_title'] is None:
-                        # 未找到映射，记录下来
+                    if product_name not in mapped_product_names:
                         if idx < 30:  # 只打印前30条未匹配的
                             print(f"未找到映射: {product_name}")
                         unmatched_products.add(product_name)
-                        continue
-
-                    mapped_title = product_info['mapped_title']
-                    category_id = product_info['category']
-
-                    # 计算有效订购数
-                    valid_orders = row['订购数'] if pd.notna(row['订购数']) else 0
-
-                    # 计算让利后金额
-                    discount_amount = row['让利后金额'] if pd.notna(row['让利后金额']) else 0
-
-                    # 获取店铺类型
-                    shop_type = str(row['店铺类型']) if pd.notna(row['店铺类型']) else ''
-
-                    # 调试：打印所有舰载熊猫系列的商品
-                    if '舰载熊猫' in product_name:
-                        print(f"舰载熊猫商品: {product_name}, 映射: {mapped_title}, 店铺类型: '{shop_type}', 订购数: {valid_orders}")
-
-                    if mapped_title not in mapped_title_stats:
-                        mapped_title_stats[mapped_title] = {
-                            'category': category_id,
-                            'valid_orders': 0,
-                            'discount_amount': 0,
-                            'douyin_orders': 0,
-                            'douyin_amount': 0,
-                            'tmall_orders': 0,
-                            'tmall_amount': 0,
-                            'youzan_orders': 0,
-                            'youzan_amount': 0,
-                            'jd_orders': 0,
-                            'jd_amount': 0
-                        }
-
-                    # 累加总数
-                    mapped_title_stats[mapped_title]['valid_orders'] += valid_orders
-                    mapped_title_stats[mapped_title]['discount_amount'] += discount_amount
-
-                    # 按店铺类型统计（只统计这四个渠道的）
-                    if shop_type:
-                        if '抖音' in shop_type or '今日头条' in shop_type or '鲁班' in shop_type:
-                            mapped_title_stats[mapped_title]['douyin_orders'] += valid_orders
-                            mapped_title_stats[mapped_title]['douyin_amount'] += discount_amount
-                            if '舰载熊猫' in product_name:
-                                print(f"  -> 匹配到抖音列，累计: {mapped_title_stats[mapped_title]['douyin_orders']}")
-                        elif '天猫' in shop_type:
-                            mapped_title_stats[mapped_title]['tmall_orders'] += valid_orders
-                            mapped_title_stats[mapped_title]['tmall_amount'] += discount_amount
-                            if '舰载熊猫' in product_name:
-                                print(f"  -> 匹配到天猫列，累计: {mapped_title_stats[mapped_title]['tmall_orders']}")
-                        elif '有赞' in shop_type:
-                            mapped_title_stats[mapped_title]['youzan_orders'] += valid_orders
-                            mapped_title_stats[mapped_title]['youzan_amount'] += discount_amount
-                            if '舰载熊猫' in product_name:
-                                print(f"  -> 匹配到有赞列，累计: {mapped_title_stats[mapped_title]['youzan_orders']}")
-                        elif '京东' in shop_type:
-                            mapped_title_stats[mapped_title]['jd_orders'] += valid_orders
-                            mapped_title_stats[mapped_title]['jd_amount'] += discount_amount
-                            if '舰载熊猫' in product_name:
-                                print(f"  -> 匹配到京东列，累计: {mapped_title_stats[mapped_title]['jd_orders']}")
+                
+                print(f"SQL聚合完成，统计到 {len(mapped_title_stats)} 个商品类型")
 
                 # 按category分组组织数据
                 tabs_data = []
