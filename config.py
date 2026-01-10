@@ -6,7 +6,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'rongzao-secret-key-change-in-production')
     DEBUG = False
     HOST = '0.0.0.0'
-    PORT = 5001  # 默认端口，会在 app.py 中根据环境覆盖
+    PORT = 8818  # 默认端口，会在 app.py 中根据环境覆盖
     
     # 数据库配置
     DB_PATH = os.path.join(os.path.dirname(__file__), 'rongzao.db')
