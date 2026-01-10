@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from flask import render_template, send_from_directory
+from flask import render_template
 from utils.auth import token_required, admin_required
 
 
@@ -55,8 +55,3 @@ def register_routes(app):
     def authentication_code():
         """防伪码管理页面"""
         return render_template('authentication_code.html')
-
-    @app.route('/<path:filename>')
-    def serve_static_file(filename):
-        """提供静态文件服务"""
-        return send_from_directory('.', filename)
