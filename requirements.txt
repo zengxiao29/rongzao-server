@@ -1,6 +1,8 @@
 Flask==3.0.0
 reportlab==4.0.7
-pandas
+pandas==2.3.3
 openpyxl
 PyJWT
 python-dotenv
+bcrypt
+xlrd
