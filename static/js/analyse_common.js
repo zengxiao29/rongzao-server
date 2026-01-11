@@ -275,6 +275,40 @@ async function loadDataFromDb(showUnmatchedAlert = false) {
             return;
         }
         
+        // 处理速率限制错误（429）
+        if (response.status === 429) {
+            const retryAfter = response.headers.get('Retry-After') || 1;
+            console.log(`触发速率限制，请等待 ${retryAfter} 秒后再试`);
+            
+            // 显示友好的提示信息
+            const overlay = document.getElementById('tableLoadingOverlay');
+            if (overlay) {
+                const text = overlay.querySelector('div:last-child');
+                if (text) {
+                    text.textContent = `操作过于频繁，请稍等 ${retryAfter} 秒后再试`;
+                    text.style.color = '#ff6b6b';
+                    text.style.fontSize = '16px';
+                    text.style.fontWeight = 'bold';
+                }
+            }
+            
+            // 如果有防抖定时器，清除它
+            if (dateChangeDebounceTimer) {
+                clearTimeout(dateChangeDebounceTimer);
+                dateChangeDebounceTimer = null;
+            }
+            
+            // 3秒后移除提示
+            setTimeout(() => {
+                const overlay = document.getElementById('tableLoadingOverlay');
+                if (overlay) {
+                    hideLoading();
+                }
+            }, 3000);
+            
+            return;
+        }
+        
         const data = await response.json();
 
         if (response.ok) {
