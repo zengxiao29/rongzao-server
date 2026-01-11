@@ -12,6 +12,7 @@ class Config:
         )
     
     DEBUG = False
+    ENV_NAME = 'base'  # 环境名称
     HOST = '0.0.0.0'
     PORT = 8818  # 默认端口，会在 app.py 中根据环境覆盖
     
@@ -30,10 +31,12 @@ class Config:
 class DevelopmentConfig(Config):
     """开发环境配置"""
     DEBUG = True
+    ENV_NAME = 'development'
 
 class ProductionConfig(Config):
     """生产环境配置"""
     DEBUG = False
+    ENV_NAME = 'production'
     SECRET_KEY = os.environ.get('SECRET_KEY')  # 必须从环境变量获取
     JWT_SECRET = os.environ.get('JWT_SECRET')  # JWT 密钥也必须从环境变量获取
 
@@ -49,12 +52,23 @@ class ProductionConfig(Config):
 # 根据环境变量选择配置
 config = {
     'development': DevelopmentConfig,
-    'production': ProductionConfig,
-    'default': DevelopmentConfig
+    'production': ProductionConfig
 }
 
 def get_config(env=None):
     """获取配置"""
     if env is None:
-        env = os.environ.get('FLASK_ENV', 'development')
-    return config.get(env, config['default'])
+        env = os.environ.get('FLASK_ENV')
+        if not env:
+            raise ValueError(
+                "FLASK_ENV 环境变量未设置！\n"
+                "请在 .env 文件中设置 FLASK_ENV（development 或 production）"
+            )
+    
+    if env not in config:
+        raise ValueError(
+            f"FLASK_ENV 值无效：{env}\n"
+            "有效值：development 或 production"
+        )
+    
+    return config[env]

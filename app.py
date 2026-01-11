@@ -31,7 +31,7 @@ config = get_config()
 app.config.from_object(config)
 
 # 调试：显示当前配置
-print(f"DEBUG: 当前环境: {os.environ.get('FLASK_ENV', 'development')}")
+print(f"DEBUG: 当前环境: {config.ENV_NAME}")
 print(f"DEBUG: SECRET_KEY: {app.config.get('SECRET_KEY')[:20]}..." if app.config.get('SECRET_KEY') else "DEBUG: SECRET_KEY: None")
 
 # 启用CSRF保护
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     
     # 根据配置获取环境信息
     debug = config.DEBUG
-    env_name = os.environ.get('FLASK_ENV', 'development')
+    env_name = config.ENV_NAME
     
     # 确定端口号：命令行参数 > 配置文件 > 默认值
     port = args.port if args.port is not None else getattr(config, 'PORT', 8818)
