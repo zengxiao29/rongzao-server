@@ -10,6 +10,9 @@ let availableDates = [];
 let selectedStartDate = null;
 let selectedEndDate = null;
 
+// 日期变化防抖定时器
+let dateChangeDebounceTimer = null;
+
 // 回调函数（由各页面实现）
 let onTabsLoaded = null; // Tab 加载完成后的回调
 let onDataLoaded = null; // 数据加载完成后的回调
@@ -364,76 +367,103 @@ async function applyDateFilter() {
  * @param {number} days - 总天数（包括今天）
  */
 async function setQuickDateRange(days) {
-    const today = new Date();
-    const endDate = new Date(today);
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - (days - 1)); // 往前数 days-1 天
+    // 清除之前的防抖定时器
+    clearTimeout(dateChangeDebounceTimer);
+    
+    // 显示加载状态
+    showLoading();
+    
+    // 延迟执行，防止快速连续点击
+    dateChangeDebounceTimer = setTimeout(async () => {
+        const today = new Date();
+        const endDate = new Date(today);
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - (days - 1)); // 往前数 days-1 天
 
-    selectedStartDate = formatDate(startDate);
-    selectedEndDate = formatDate(endDate);
+        selectedStartDate = formatDate(startDate);
+        selectedEndDate = formatDate(endDate);
 
-    document.getElementById('startDate').value = selectedStartDate;
-    document.getElementById('endDate').value = selectedEndDate;
+        document.getElementById('startDate').value = selectedStartDate;
+        document.getElementById('endDate').value = selectedEndDate;
 
-    // 调用回调
-    if (onDateChanged) {
-        onDateChanged(selectedStartDate, selectedEndDate);
-    }
+        // 调用回调
+        if (onDateChanged) {
+            onDateChanged(selectedStartDate, selectedEndDate);
+        }
 
-    await loadDataFromDb();
+        await loadDataFromDb();
+    }, 300); // 300ms 防抖延迟
 }
 
 /**
  * 设置当前周
  */
 async function setCurrentWeek() {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    // 清除之前的防抖定时器
+    clearTimeout(dateChangeDebounceTimer);
+    
+    // 显示加载状态
+    showLoading();
+    
+    // 延迟执行，防止快速连续点击
+    dateChangeDebounceTimer = setTimeout(async () => {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
 
-    const sunday = new Date(today);
-    sunday.setDate(today.getDate() - dayOfWeek);
+        const sunday = new Date(today);
+        sunday.setDate(today.getDate() - dayOfWeek);
 
-    const saturday = new Date(sunday);
-    saturday.setDate(sunday.getDate() + 6);
+        const saturday = new Date(sunday);
+        saturday.setDate(sunday.getDate() + 6);
 
-    selectedStartDate = formatDate(sunday);
-    selectedEndDate = formatDate(saturday);
+        selectedStartDate = formatDate(sunday);
+        selectedEndDate = formatDate(saturday);
 
-    document.getElementById('startDate').value = selectedStartDate;
-    document.getElementById('endDate').value = selectedEndDate;
+        document.getElementById('startDate').value = selectedStartDate;
+        document.getElementById('endDate').value = selectedEndDate;
 
-    // 调用回调
-    if (onDateChanged) {
-        onDateChanged(selectedStartDate, selectedEndDate);
-    }
+        // 调用回调
+        if (onDateChanged) {
+            onDateChanged(selectedStartDate, selectedEndDate);
+        }
 
-    await loadDataFromDb();
+        await loadDataFromDb();
+    }, 300); // 300ms 防抖延迟
 }
 
 /**
  * 设置本月
  */
 async function setCurrentMonth() {
-    const today = new Date();
+    // 清除之前的防抖定时器
+    clearTimeout(dateChangeDebounceTimer);
+    
+    // 显示加载状态
+    showLoading();
+    
+    // 延迟执行，防止快速连续点击
+    dateChangeDebounceTimer = setTimeout(async () => {
+        const today = new Date();
 
-    // 获取本月第一天
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        // 获取本月第一天
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    // 获取本月最后一天
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        // 获取本月最后一天
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    selectedStartDate = formatDate(firstDay);
-    selectedEndDate = formatDate(lastDay);
+        selectedStartDate = formatDate(firstDay);
+        selectedEndDate = formatDate(lastDay);
 
-    document.getElementById('startDate').value = selectedStartDate;
-    document.getElementById('endDate').value = selectedEndDate;
+        document.getElementById('startDate').value = selectedStartDate;
+        document.getElementById('endDate').value = selectedEndDate;
 
-    // 调用回调
-    if (onDateChanged) {
-        onDateChanged(selectedStartDate, selectedEndDate);
-    }
+        // 调用回调
+        if (onDateChanged) {
+            onDateChanged(selectedStartDate, selectedEndDate);
+        }
 
-    await loadDataFromDb();
+        await loadDataFromDb();
+    }, 300); // 300ms 防抖延迟
 }
 
 /**
