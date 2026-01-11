@@ -79,6 +79,8 @@ analysis_debug/
 # Test files and directories
 test_files/
 temp_files/
+test_inventory.csv
+test_inventory*.py
 
 # iFlow CLI files
 .iflow/
