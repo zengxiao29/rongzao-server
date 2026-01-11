@@ -2,6 +2,7 @@
 import os
 from flask import Flask
 from dotenv import load_dotenv
+from flask_wtf.csrf import CSRFProtect
 
 # 加载 .env 文件中的环境变量
 load_dotenv()
@@ -17,6 +18,19 @@ from api.report import register_report_routes
 from api.analyse_by_product import register_analyse_by_product_routes
 
 app = Flask(__name__)
+
+# 调试：检查SECRET_KEY是否正确加载
+secret_key = os.environ.get('SECRET_KEY')
+print(f"DEBUG: SECRET_KEY from environment: {secret_key}")
+if secret_key:
+    app.config['SECRET_KEY'] = secret_key
+else:
+    print("WARNING: SECRET_KEY not found in environment variables")
+    # 设置一个默认密钥用于开发
+    app.config['SECRET_KEY'] = 'dev-secret-key-change-this-in-production'
+
+# 启用CSRF保护
+csrf = CSRFProtect(app)
 
 # 注册所有路由
 register_routes(app)

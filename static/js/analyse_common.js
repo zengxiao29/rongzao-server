@@ -56,6 +56,14 @@ async function loadAvailableDates() {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
         const response = await fetch('/api/analyse/dates', { headers: headers });
 
         // 检查是否需要重新登录
@@ -234,6 +242,14 @@ async function loadDataFromDb(showUnmatchedAlert = false) {
 
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
         }
 
         const response = await fetch('/api/analyse/data', {
@@ -453,6 +469,14 @@ async function exportWeeklyReport() {
 
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
         }
 
         const response = await fetch('/api/analyse/export-weekly-report', {

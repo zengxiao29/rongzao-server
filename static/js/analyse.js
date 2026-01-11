@@ -548,6 +548,14 @@ async function handleFileUpload(file) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
         const response = await fetch('/api/analyse/upload', {
             method: 'POST',
             headers: headers,
@@ -862,6 +870,14 @@ async function handleInventoryFileUpload(file) {
         uploadResult.style.display = 'block';
         uploadResult.querySelector('p').textContent = '正在上传库存文件...';
         uploadResult.style.color = '#666';
+
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
 
         const response = await fetch('/api/upload/inventory', {
             method: 'POST',
