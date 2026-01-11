@@ -70,20 +70,7 @@ def main():
         category_map['舰载熊猫系列']: ['熊猫', '公仔'],
     }
 
-    # 3. 读取tab_config.json获取映射规则
-    config_path = os.path.join(os.path.dirname(__file__), 'tab_config.json')
     all_mappings = []
-    if os.path.exists(config_path):
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-            for tab in config.get('tabs', []):
-                mappings = tab.get('mappings', [])
-                for mapping in mappings:
-                    all_mappings.append({
-                        'product': mapping['product'],
-                        'type': mapping['type']
-                    })
-    print(f'读取到 {len(all_mappings)} 条映射规则')
 
     # 4. 填充ProductInfo表
     inserted_count = 0
