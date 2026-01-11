@@ -9,6 +9,9 @@ from flask_limiter.util import get_remote_address
 # 加载 .env 文件中的环境变量
 load_dotenv()
 
+# 导入配置
+from config import get_config
+
 from routes import register_routes
 from api.dates import register_dates_routes
 from api.analyse import register_analyse_routes
@@ -21,18 +24,15 @@ from api.analyse_by_product import register_analyse_by_product_routes
 
 app = Flask(__name__)
 
-# 调试：检查SECRET_KEY是否正确加载
-secret_key = os.environ.get('SECRET_KEY')
-print(f"DEBUG: SECRET_KEY from environment: {secret_key}")
+# 获取配置（根据 FLASK_ENV 环境变量自动选择）
+config = get_config()
 
-if not secret_key:
-    raise ValueError(
-        "SECRET_KEY 环境变量未设置！\n"
-        "请在 .env 文件中设置 SECRET_KEY，或使用以下命令生成：\n"
-        "python3 -c \"import secrets; print('SECRET_KEY=' + secrets.token_hex(32))\""
-    )
+# 应用配置到 Flask 应用
+app.config.from_object(config)
 
-app.config['SECRET_KEY'] = secret_key
+# 调试：显示当前配置
+print(f"DEBUG: 当前环境: {os.environ.get('FLASK_ENV', 'development')}")
+print(f"DEBUG: SECRET_KEY: {app.config.get('SECRET_KEY')[:20]}..." if app.config.get('SECRET_KEY') else "DEBUG: SECRET_KEY: None")
 
 # 启用CSRF保护
 csrf = CSRFProtect(app)
@@ -67,21 +67,13 @@ if __name__ == '__main__':
     parser.add_argument('--host', type=str, default='0.0.0.0', help='服务器主机地址')
     args = parser.parse_args()
     
-    # 检查是否是服务器环境
-    if os.path.exists('.ecs'):
-        # 服务器环境
-        default_port = 8818
-        debug = False
-        env_name = "服务器环境"
-    else:
-        # 开发环境
-        default_port = 8818
-        debug = True
-        env_name = "开发环境"
+    # 根据配置获取环境信息
+    debug = config.DEBUG
+    env_name = os.environ.get('FLASK_ENV', 'development')
     
-    # 确定端口号：命令行参数 > 环境变量 > 默认值
-    port = args.port if args.port is not None else default_port
+    # 确定端口号：命令行参数 > 配置文件 > 默认值
+    port = args.port if args.port is not None else getattr(config, 'PORT', 8818)
     
-    print(f"运行模式: {env_name} (端口 {port})")
+    print(f"运行模式: {env_name} (端口 {port}, DEBUG={debug})")
     # 添加use_reloader=False以避免在命令行启动时产生多个进程
     app.run(debug=debug, host=args.host, port=port, use_reloader=False)

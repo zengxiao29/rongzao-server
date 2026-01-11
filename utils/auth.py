@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 import jwt
 import os
-import warnings
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import request, jsonify, g
 
-# JWT 配置
-JWT_SECRET = os.environ.get('JWT_SECRET', 'dev-secret-key-change-in-production')
+# JWT 配置 - 强制要求从环境变量获取
+JWT_SECRET = os.environ.get('JWT_SECRET')
 
-# 验证是否使用了默认密钥
-if JWT_SECRET == 'dev-secret-key-change-in-production' or JWT_SECRET == 'your-secret-key-change-this-in-production':
-    warnings.warn(
-        "JWT_SECRET 使用了默认值，请设置环境变量！\n"
-        "生产环境必须设置强随机密钥，否则存在严重安全风险。\n"
-        "设置方法: export JWT_SECRET='your-secret-key'"
+# 验证环境变量是否设置
+if not JWT_SECRET:
+    raise ValueError(
+        "JWT_SECRET 环境变量未设置！\n"
+        "请在 .env 文件中设置 JWT_SECRET，或使用以下命令生成：\n"
+        "python3 -c \"import secrets; print('JWT_SECRET=' + secrets.token_hex(32))\""
     )
 
 JWT_ALGORITHM = 'HS256'
