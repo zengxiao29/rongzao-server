@@ -24,12 +24,15 @@ app = Flask(__name__)
 # 调试：检查SECRET_KEY是否正确加载
 secret_key = os.environ.get('SECRET_KEY')
 print(f"DEBUG: SECRET_KEY from environment: {secret_key}")
-if secret_key:
-    app.config['SECRET_KEY'] = secret_key
-else:
-    print("WARNING: SECRET_KEY not found in environment variables")
-    # 设置一个默认密钥用于开发
-    app.config['SECRET_KEY'] = 'dev-secret-key-change-this-in-production'
+
+if not secret_key:
+    raise ValueError(
+        "SECRET_KEY 环境变量未设置！\n"
+        "请在 .env 文件中设置 SECRET_KEY，或使用以下命令生成：\n"
+        "python3 -c \"import secrets; print('SECRET_KEY=' + secrets.token_hex(32))\""
+    )
+
+app.config['SECRET_KEY'] = secret_key
 
 # 启用CSRF保护
 csrf = CSRFProtect(app)

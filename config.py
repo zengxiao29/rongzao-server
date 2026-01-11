@@ -3,7 +3,14 @@ import os
 
 class Config:
     """基础配置"""
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'rongzao-secret-key-change-in-production')
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    
+    if not SECRET_KEY:
+        raise ValueError(
+            "SECRET_KEY 环境变量未设置！\n"
+            "请在 .env 文件中设置 SECRET_KEY。"
+        )
+    
     DEBUG = False
     HOST = '0.0.0.0'
     PORT = 8818  # 默认端口，会在 app.py 中根据环境覆盖
