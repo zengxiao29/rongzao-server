@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
 from flask import Flask
 from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
