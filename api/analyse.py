@@ -5,6 +5,7 @@ import pandas as pd
 from flask import jsonify, request
 from dbpy.database import get_db_connection
 from utils.auth import token_required
+from utils.error_handler import handle_api_error
 
 
 def register_analyse_routes(app):

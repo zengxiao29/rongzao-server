@@ -8,3 +8,4 @@ bcrypt
 xlrd
 Flask-WTF
 Flask-Limiter
+psutil

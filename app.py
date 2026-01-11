@@ -80,4 +80,5 @@ if __name__ == '__main__':
     port = args.port if args.port is not None else default_port
     
     print(f"运行模式: {env_name} (端口 {port})")
-    app.run(debug=debug, host=args.host, port=port)
+    # 添加use_reloader=False以避免在命令行启动时产生多个进程
+    app.run(debug=debug, host=args.host, port=port, use_reloader=False)

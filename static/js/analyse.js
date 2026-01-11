@@ -580,7 +580,14 @@ async function handleFileUpload(file) {
             uploadResult.style.display = 'block';
             const message = `上传完成！总计 ${result.total} 条，成功 ${result.success_count} 条，重复 ${result.duplicate_count} 条，错误 ${result.error_count} 条`;
             uploadResult.querySelector('p').textContent = message;
-
+            
+            // 根据错误数量设置颜色：有错误时显示红色，否则显示绿色
+            if (result.error_count > 0) {
+                uploadResult.style.color = '#dc3545';
+            } else {
+                uploadResult.style.color = '#28a745';
+            }
+        
             // 检查是否有警告信息
             if (result.warning) {
                 const warningDiv = document.createElement('div');
@@ -593,15 +600,23 @@ async function handleFileUpload(file) {
                 warningDiv.textContent = '⚠️ ' + result.warning;
                 uploadResult.appendChild(warningDiv);
             }
-
+        
             // 重新加载可用日期和数据
             await loadAvailableDates();
             await loadDataFromDb();
         } else {
+            const uploadResult = document.getElementById('uploadResult');
+            uploadResult.style.display = 'block';
+            uploadResult.querySelector('p').textContent = '上传失败: ' + result.error;
+            uploadResult.style.color = '#dc3545';
             alert('上传失败: ' + result.error);
         }
     } catch (error) {
         console.error('上传失败:', error);
+        const uploadResult = document.getElementById('uploadResult');
+        uploadResult.style.display = 'block';
+        uploadResult.querySelector('p').textContent = '上传失败: ' + error.message;
+        uploadResult.style.color = '#dc3545';
         alert('上传失败: ' + error.message);
     }
 }

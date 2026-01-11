@@ -1,10 +1,105 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 import re
+import sqlite3
+import logging
+import os
+import tempfile
+from datetime import datetime
 from flask import jsonify, request, g
 from dbpy.database import get_db_connection, release_db_connection, calculate_record_hash
 from utils.auth import token_required
 from utils.operation_logger import log_operation
+from utils.file_validator import FileValidator
+
+
+def create_upload_logger(log_prefix="upload"):
+    """
+    为上传操作创建专用的调试日志记录器
+    
+    Args:
+        log_prefix: 日志文件名的前缀
+        
+    Returns:
+        logger: 配置好的日志记录器
+        log_filename: 生成的日志文件路径
+    """
+    try:
+        # 确保logs目录存在
+        os.makedirs('logs', exist_ok=True)
+        
+        # 生成日志文件名
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_filename = f"logs/{log_prefix}_debug_{timestamp}.log"
+        
+        # 创建独立的日志记录器
+        logger_name = f"{log_prefix}_{timestamp}"
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG)
+        
+        # 清除可能存在的旧处理器
+        logger.handlers.clear()
+        
+        # 创建文件处理器
+        file_handler = logging.FileHandler(log_filename, encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        
+        # 创建控制台处理器（输出到stdout）
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        
+        # 设置详细的日志格式
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+        
+        # 添加处理器到记录器
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+        
+        # 记录创建日志记录器的信息
+        logger.info(f'创建上传调试日志记录器: {logger_name}')
+        logger.info(f'日志文件: {log_filename}')
+        
+        return logger, log_filename
+    except Exception as e:
+        # 如果日志记录器创建失败，创建一个基本的记录器作为后备
+        print(f"警告: 创建上传调试日志记录器失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # 创建基本的记录器
+        logger = logging.getLogger(f"{log_prefix}_fallback")
+        logger.setLevel(logging.DEBUG)
+        if not logger.handlers:
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+            console_handler.setFormatter(formatter)
+            logger.addHandler(console_handler)
+        
+        return logger, f"logs/{log_prefix}_fallback.log"
+
+
+def log_upload_step(logger, step, message, level='info'):
+    """
+    记录上传过程的步骤日志
+    
+    Args:
+        logger: 日志记录器
+        step: 步骤名称
+        message: 日志消息
+        level: 日志级别 (debug, info, warning, error)
+    """
+    full_message = f"[{step}] {message}"
+    if level == 'debug':
+        logger.debug(full_message)
+    elif level == 'warning':
+        logger.warning(full_message)
+    elif level == 'error':
+        logger.error(full_message)
+    else:  # info
+        logger.info(full_message)
 
 
 def register_upload_routes(app):
@@ -14,59 +109,191 @@ def register_upload_routes(app):
     @token_required
     def analyse_upload():
         """处理 Excel 文件上传并上传到数据库"""
-        print('收到 analyse 文件上传请求')
-
-        if 'file' not in request.files:
-            print('错误：请求中没有文件')
-            return jsonify({'error': '没有文件'}), 400
-
-        file = request.files['file']
-        if file.filename == '':
-            print('错误：文件名为空')
-            return jsonify({'error': '未选择文件'}), 400
-
-        print(f'开始处理文件: {file.filename}')
-
+        # 创建调试日志记录器
+        logger, log_filename = create_upload_logger("analyse_upload")
+        logger.info('收到 analyse 文件上传请求')
+        
         try:
-            # 直接上传到数据库
-            return upload_to_database_internal(file)
+            # 获取当前用户信息
+            current_user = g.current_user if hasattr(g, 'current_user') else None
+            if current_user:
+                logger.info(f'当前用户: {current_user.get("username", "未知")}, 角色: {current_user.get("role", "未知")}')
+            
+            if 'file' not in request.files:
+                error_msg = '错误：请求中没有文件'
+                logger.error(error_msg)
+                return jsonify({'error': '没有文件'}), 400
+
+            file = request.files['file']
+            if file.filename == '':
+                error_msg = '错误：文件名为空'
+                logger.error(error_msg)
+                return jsonify({'error': '未选择文件'}), 400
+
+            logger.info(f'开始处理文件: {file.filename}')
+            logger.info(f'文件大小: {len(file.read())} 字节')
+            file.seek(0)  # 重置文件指针
+            
+            # 保存文件到临时目录进行验证
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+                file.save(tmp_file.name)
+                logger.info(f'文件已保存到临时位置: {tmp_file.name}')
+                
+                # 验证文件格式
+                logger.info('开始验证文件格式...')
+                is_valid, msg, df = FileValidator.validate_excel_format(tmp_file.name)
+                
+                if not is_valid:
+                    os.unlink(tmp_file.name)  # 删除临时文件
+                    logger.error(f'文件格式验证失败: {msg}')
+                    return jsonify({'error': f'文件格式错误: {msg}'}), 400
+                
+                # 验证通过，继续处理
+                tmp_file_path = tmp_file.name
+                logger.info('文件格式验证通过')
+            
+            # 继续上传处理
+            logger.info('开始上传处理...')
+            result = upload_to_database_internal_with_path(tmp_file_path, file.filename)
+            logger.info(f'上传处理完成，结果: {result}')
+            
+            # 记录操作日志
+            if result.get('success') and current_user:
+                log_operation(
+                    username=current_user.get('username', 'unknown'),
+                    role=current_user.get('role', 'user'),
+                    operation_type='upload_excel_analyse',
+                    detail={
+                        'filename': file.filename,
+                        'log_file': log_filename,
+                        **result
+                    },
+                    result='success'
+                )
+            
+            return result
         except Exception as e:
-            print(f'处理文件时出错: {str(e)}')
+            error_msg = f'处理文件时出错: {str(e)}'
+            logger.error(error_msg, exc_info=True)
             import traceback
             traceback.print_exc()
+            
+            # 记录失败操作日志
+            current_user = g.current_user if hasattr(g, 'current_user') else None
+            if current_user:
+                log_operation(
+                    username=current_user.get('username', 'unknown'),
+                    role=current_user.get('role', 'user'),
+                    operation_type='upload_excel_analyse',
+                    detail={'filename': file.filename if 'file' in locals() else 'unknown'},
+                    result='failed',
+                    error_message=str(e)
+                )
+            
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/upload', methods=['POST'])
     @token_required
     def upload_file():
         """处理Excel文件上传"""
-        print('收到文件上传请求')
-
-        if 'file' not in request.files:
-            print('错误：请求中没有文件')
-            return jsonify({'error': '没有文件'}), 400
-
-        file = request.files['file']
-        if file.filename == '':
-            print('错误：文件名为空')
-            return jsonify({'error': '未选择文件'}), 400
-
-        print(f'开始处理文件: {file.filename}')
-
+        # 创建调试日志记录器
+        logger, log_filename = create_upload_logger("upload_file")
+        logger.info('收到文件上传请求')
+        
         try:
+            # 获取当前用户信息
+            current_user = g.current_user if hasattr(g, 'current_user') else None
+            if current_user:
+                logger.info(f'当前用户: {current_user.get("username", "未知")}, 角色: {current_user.get("role", "未知")}')
+            
+            if 'file' not in request.files:
+                error_msg = '错误：请求中没有文件'
+                logger.error(error_msg)
+                return jsonify({'error': '没有文件'}), 400
+
+            file = request.files['file']
+            if file.filename == '':
+                error_msg = '错误：文件名为空'
+                logger.error(error_msg)
+                return jsonify({'error': '未选择文件'}), 400
+
+            logger.info(f'开始处理文件: {file.filename}')
+            logger.info(f'文件大小: {len(file.read())} 字节')
+            file.seek(0)  # 重置文件指针
+            
+            # 保存文件到临时目录进行验证
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+                file.save(tmp_file.name)
+                logger.info(f'文件已保存到临时位置: {tmp_file.name}')
+                logger.info(f'临时文件大小: {os.path.getsize(tmp_file.name)} 字节')
+                
+                # 验证文件格式
+                logger.info('开始验证文件格式...')
+                is_valid, msg, df = FileValidator.validate_excel_format(tmp_file.name)
+                
+                if not is_valid:
+                    os.unlink(tmp_file.name)  # 删除临时文件
+                    logger.error(f'文件格式验证失败: {msg}')
+                    return jsonify({'error': f'文件格式错误: {msg}'}), 400
+                
+                # 验证通过，继续处理
+                tmp_file_path = tmp_file.name
+                logger.info('文件格式验证通过')
+                if df is not None:
+                    logger.info(f'验证时读取的数据框: {len(df)} 行, {len(df.columns)} 列')
+                    logger.info(f'列名: {df.columns.tolist()}')
+            
             # 读取Excel文件
-            df = pd.read_excel(file)
-            print(f'成功读取Excel文件，共 {len(df)} 行数据')
+            logger.info('开始读取Excel文件...')
+            df = pd.read_excel(tmp_file_path)
+            logger.info(f'成功读取Excel文件，共 {len(df)} 行数据，{len(df.columns)} 列')
+            logger.info(f'列名: {df.columns.tolist()}')
+            logger.info(f'前几行数据样本: {df.head(3).to_dict(orient="records") if not df.empty else "空数据"}')
+
+            # 删除临时文件
+            os.unlink(tmp_file_path)
+            logger.info('已删除临时文件')
 
             # 处理数据
+            logger.info('开始处理数据...')
             result = process_data(df)
-            print(f'数据处理完成，共 {len(result["products"])} 个商品')
+            logger.info(f'数据处理完成，共 {len(result["products"])} 个商品')
+            logger.info(f'处理结果: {result}')
 
+            # 记录操作日志
+            if current_user:
+                log_operation(
+                    username=current_user.get('username', 'unknown'),
+                    role=current_user.get('role', 'user'),
+                    operation_type='upload_excel_analysis',
+                    detail={
+                        'filename': file.filename,
+                        'log_file': log_filename,
+                        'product_count': len(result["products"]),
+                        'row_count': len(df)
+                    },
+                    result='success'
+                )
+            
             return jsonify(result)
         except Exception as e:
-            print(f'处理文件时出错: {str(e)}')
+            error_msg = f'处理文件时出错: {str(e)}'
+            logger.error(error_msg, exc_info=True)
             import traceback
             traceback.print_exc()
+            
+            # 记录失败操作日志
+            current_user = g.current_user if hasattr(g, 'current_user') else None
+            if current_user:
+                log_operation(
+                    username=current_user.get('username', 'unknown'),
+                    role=current_user.get('role', 'user'),
+                    operation_type='upload_excel_analysis',
+                    detail={'filename': file.filename if 'file' in locals() else 'unknown'},
+                    result='failed',
+                    error_message=str(e)
+                )
+            
             return jsonify({'error': str(e)}), 500
     
     # 注册库存上传路由
@@ -76,54 +303,99 @@ def register_upload_routes(app):
     @token_required
     def upload_to_database():
         """上传Excel数据到数据库"""
-        print('收到数据库上传请求')
-
-        if 'file' not in request.files:
-            print('错误：请求中没有文件')
-            return jsonify({'error': '没有文件'}), 400
-
-        file = request.files['file']
-        if file.filename == '':
-            print('错误：文件名为空')
-            return jsonify({'error': '未选择文件'}), 400
-
-        print(f'开始处理文件: {file.filename}')
-
+        # 创建调试日志记录器
+        logger, log_filename = create_upload_logger("upload_to_database")
+        logger.info('收到数据库上传请求')
+        
         try:
-            result = upload_to_database_internal(file)
+            # 获取当前用户信息
+            current_user = g.current_user if hasattr(g, 'current_user') else None
+            if current_user:
+                logger.info(f'当前用户: {current_user.get("username", "未知")}, 角色: {current_user.get("role", "未知")}')
+            
+            if 'file' not in request.files:
+                error_msg = '错误：请求中没有文件'
+                logger.error(error_msg)
+                return jsonify({'error': '没有文件'}), 400
+
+            file = request.files['file']
+            if file.filename == '':
+                error_msg = '错误：文件名为空'
+                logger.error(error_msg)
+                return jsonify({'error': '未选择文件'}), 400
+
+            logger.info(f'开始处理文件: {file.filename}')
+            logger.info(f'文件大小: {len(file.read())} 字节')
+            file.seek(0)  # 重置文件指针
+            
+            # 保存文件到临时目录进行验证
+            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+                file.save(tmp_file.name)
+                logger.info(f'文件已保存到临时位置: {tmp_file.name}')
+                logger.info(f'临时文件大小: {os.path.getsize(tmp_file.name)} 字节')
+                
+                # 验证文件格式
+                logger.info('开始验证文件格式...')
+                is_valid, msg, df = FileValidator.validate_excel_format(tmp_file.name)
+                
+                if not is_valid:
+                    os.unlink(tmp_file.name)  # 删除临时文件
+                    logger.error(f'文件格式验证失败: {msg}')
+                    return jsonify({'error': f'文件格式错误: {msg}'}), 400
+                
+                # 验证通过，继续处理
+                tmp_file_path = tmp_file.name
+                logger.info('文件格式验证通过')
+                if df is not None:
+                    logger.info(f'验证时读取的数据框: {len(df)} 行, {len(df.columns)} 列')
+                    logger.info(f'列名: {df.columns.tolist()}')
+            
+            logger.info('开始数据库上传处理...')
+            result = upload_to_database_internal_with_path(tmp_file_path, file.filename)
+            logger.info(f'数据库上传处理完成，结果: {result}')
             
             # 记录上传日志
             if result.get('success'):
-                log_operation(
-                    username=g.current_user['username'],
-                    role=g.current_user['role'],
-                    operation_type='upload_excel',
-                    detail={
-                        'filename': file.filename,
-                        'total': result.get('total', 0),
-                        'success_count': result.get('success_count', 0),
-                        'duplicate_count': result.get('duplicate_count', 0),
-                        'error_count': result.get('error_count', 0),
-                        'filtered_count': result.get('filtered_count', 0)
-                    },
-                    result='success'
-                )
+                detail = {
+                    'filename': file.filename,
+                    'log_file': log_filename,
+                    'total': result.get('total', 0),
+                    'success_count': result.get('success_count', 0),
+                    'duplicate_count': result.get('duplicate_count', 0),
+                    'error_count': result.get('error_count', 0),
+                    'filtered_count': result.get('filtered_count', 0)
+                }
+                
+                if current_user:
+                    log_operation(
+                        username=current_user.get('username', 'unknown'),
+                        role=current_user.get('role', 'user'),
+                        operation_type='upload_excel',
+                        detail=detail,
+                        result='success'
+                    )
+                
+                # 添加日志文件路径到返回结果
+                result['debug_log'] = log_filename
             
             return result
         except Exception as e:
-            print(f'处理文件时出错: {str(e)}')
+            error_msg = f'处理文件时出错: {str(e)}'
+            logger.error(error_msg, exc_info=True)
             import traceback
             traceback.print_exc()
             
             # 记录失败日志
-            log_operation(
-                username=g.current_user['username'],
-                role=g.current_user['role'],
-                operation_type='upload_excel',
-                detail={'filename': file.filename},
-                result='failed',
-                error_message=str(e)
-            )
+            current_user = g.current_user if hasattr(g, 'current_user') else None
+            if current_user:
+                log_operation(
+                    username=current_user.get('username', 'unknown'),
+                    role=current_user.get('role', 'user'),
+                    operation_type='upload_excel',
+                    detail={'filename': file.filename if 'file' in locals() else 'unknown'},
+                    result='failed',
+                    error_message=str(e)
+                )
             
             return jsonify({'error': str(e)}), 500
 
@@ -171,12 +443,40 @@ def process_data(df):
 
 
 def upload_to_database_internal(file):
-    """内部函数：上传Excel数据到数据库"""
+    """内部函数：上传Excel数据到数据库（保持兼容性，使用临时文件方式）"""
     print(f'开始处理文件: {file.filename}')
 
+    # 保存文件到临时目录进行处理
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp_file:
+        file.save(tmp_file.name)
+        tmp_file_path = tmp_file.name
+
+    # 调用路径版本的处理函数
+    return upload_to_database_internal_with_path(tmp_file_path, file.filename)
+
+
+def upload_to_database_internal_with_path(file_path, original_filename):
+    """内部函数：上传Excel数据到数据库（接收文件路径）"""
+    # 使用统一的日志系统创建记录器
+    logger, log_filename = create_upload_logger("upload_internal")
+    logger.info(f'开始处理文件: {original_filename}')
+    logger.info(f'文件路径: {file_path}')
+    
+    # 检查文件是否存在
+    import os
+    if not os.path.exists(file_path):
+        logger.error(f'文件不存在: {file_path}')
+        return {
+            'success': False,
+            'error': f'临时文件不存在: {file_path}'
+        }
+
     # 读取Excel文件
-    df = pd.read_excel(file)
-    print(f'成功读取Excel文件，共 {len(df)} 行数据')
+    df = pd.read_excel(file_path)
+    logger.info(f'成功读取Excel文件，共 {len(df)} 行数据')
+
+    # 删除临时文件
+    os.unlink(file_path)
 
     # 将所有Timestamp类型转换为字符串
     for col in df.columns:
@@ -187,14 +487,14 @@ def upload_to_database_internal(file):
 
     # 应用层去重：处理Excel文件内部的重复
     df_deduped = df.drop_duplicates(keep='first')
-    print(f'Excel内去重: {len(df)} -> {len(df_deduped)} 条记录')
+    logger.info(f'Excel内去重: {len(df)} -> {len(df_deduped)} 条记录')
 
     # 过滤掉店铺名称为"金蝶对接"的记录
     df_filtered = df_deduped[df_deduped['店铺名称'] != '金蝶对接'].copy()
-    print(f'过滤金蝶对接记录: {len(df_deduped)} -> {len(df_filtered)} 条记录')
+    logger.info(f'过滤金蝶对接记录: {len(df_deduped)} -> {len(df_filtered)} 条记录')
 
     if len(df_filtered) == 0:
-        print('过滤后没有数据可上传')
+        logger.info('过滤后没有数据可上传')
         return {
             'success': True,
             'total': len(df_deduped),
@@ -212,76 +512,157 @@ def upload_to_database_internal(file):
     duplicate_count = 0
     error_count = 0
 
-    # 准备插入SQL
-    insert_sql = '''
-        INSERT OR IGNORE INTO OrderDetails (
-            record_hash, 店铺类型, 店铺名称, 分销商名称, 单据编号, 订单类型,
-            拍单时间, 付款时间, 审核时间, 会员代码, 会员名称, 内部便签, 业务员,
-            建议仓库, 建议快递, 到账, 商品图片, 品牌, 商品税率, 商品代码,
-            商品名称, 商品简称, 规格代码, 规格名称, 商品备注, 代发订单, 订单标记,
-            预计发货时间, 订购数, 总重量, 折扣, 标准进价, 标准单价, 标准金额,
-            实际单价, 实际金额, 让利后金额, 让利金额, 物流费用, 成本总价,
-            买家备注, 卖家备注, 制单人, 商品实际利润, 商品标准利润, 商品已发货数量,
-            平台旗帜, 发货时间, 原产地, 平台商品名称, 平台规格名称, 供应商,
-            赠品来源, 买家支付金额, 平台支付金额, 其他服务费, 发票种类,
-            发票抬头类型, 发票类型, 开户行, 账号, 发票电话, 发票地址, 收货邮箱,
-            周期购商品, 平台单号, 到账时间, 附加信息, 发票抬头, 发票内容,
-            纳税人识别号, 收货人, 收货人手机, 邮编, 收货地址, 商品类别,
-            二次备注, 商品单位, 币别, 会员邮箱, 订单标签, 平台交易状态,
-            赠品, 是否退款, 地区信息, 确认收货时间, 作废
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    '''
-
-    # 遍历每一行数据（使用过滤后的数据 df_filtered）
+    # 处理每一行数据
+    from datetime import datetime
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
     for idx, row in df_filtered.iterrows():
         try:
-            # 计算哈希值
+            # 计算记录哈希值用于去重
             record_hash = calculate_record_hash(row)
+            logger.info(f'处理第 {idx} 行，计算的哈希值: {record_hash}')
+
+            # 插入数据到OrderDetails表（使用INSERT OR IGNORE来避免重复）
+            insert_sql = """
+                INSERT OR IGNORE INTO OrderDetails (
+                    record_hash, 店铺类型, 店铺名称, 分销商名称, 单据编号, 订单类型,
+                    拍单时间, 付款时间, 审核时间, 会员代码, 会员名称, 内部便签, 业务员,
+                    建议仓库, 建议快递, 到账, 商品图片, 品牌, 商品税率, 商品代码,
+                    商品名称, 商品简称, 规格代码, 规格名称, 商品备注, 代发订单, 订单标记,
+                    预计发货时间, 订购数, 总重量, 折扣, 标准进价, 标准单价, 标准金额,
+                    实际单价, 实际金额, 让利后金额, 让利金额, 物流费用, 成本总价,
+                    买家备注, 卖家备注, 制单人, 商品实际利润, 商品标准利润, 商品已发货数量,
+                    平台旗帜, 发货时间, 原产地, 平台商品名称, 平台规格名称, 供应商,
+                    赠品来源, 买家支付金额, 平台支付金额, 其他服务费, 发票种类,
+                    发票抬头类型, 发票类型, 开户行, 账号, 发票电话, 发票地址, 收货邮箱,
+                    周期购商品, 平台单号, 到账时间, 附加信息, 发票抬头, 发票内容,
+                    纳税人识别号, 收货人, 收货人手机, 邮编, 收货地址, 商品类别,
+                    二次备注, 商品单位, 币别, 会员邮箱, 订单标签, 平台交易状态,
+                    赠品, 是否退款, 地区信息, 确认收货时间, 作废, 创建时间
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
 
             # 准备数据
-            data = (
+            data = [
                 record_hash,
-                row.get('店铺类型'), row.get('店铺名称'), row.get('分销商名称'),
-                row.get('单据编号'), row.get('订单类型'), row.get('拍单时间'),
-                row.get('付款时间'), row.get('审核时间'), row.get('会员代码'),
-                row.get('会员名称'), row.get('内部便签'), row.get('业务员'),
-                row.get('建议仓库'), row.get('建议快递'), row.get('到账'),
-                row.get('商品图片'), row.get('品牌'), row.get('商品税率'),
-                row.get('商品代码'), row.get('商品名称'), row.get('商品简称'),
-                row.get('规格代码'), row.get('规格名称'), row.get('商品备注'),
-                row.get('代发订单'), row.get('订单标记'), row.get('预计发货时间'),
-                row.get('订购数'), row.get('总重量'), row.get('折扣'),
-                row.get('标准进价'), row.get('标准单价'), row.get('标准金额'),
-                row.get('实际单价'), row.get('实际金额'), row.get('让利后金额'),
-                row.get('让利金额'), row.get('物流费用'), row.get('成本总价'),
-                row.get('买家备注'), row.get('卖家备注'), row.get('制单人'),
-                row.get('商品实际利润'), row.get('商品标准利润'),
-                row.get('商品已发货数量'), row.get('平台旗帜'), row.get('发货时间'),
-                row.get('原产地'), row.get('平台商品名称'), row.get('平台规格名称'),
-                row.get('供应商'), row.get('赠品来源'), row.get('买家支付金额'),
-                row.get('平台支付金额'), row.get('其他服务费'), row.get('发票种类'),
-                row.get('发票抬头类型'), row.get('发票类型'), row.get('开户行'),
-                row.get('账号'), row.get('发票电话'), row.get('发票地址'),
-                row.get('收货邮箱'), row.get('周期购商品'), row.get('平台单号'),
-                row.get('到账时间'), row.get('附加信息'), row.get('发票抬头'),
-                row.get('发票内容'), row.get('纳税人识别号'), row.get('收货人'),
-                row.get('收货人手机'), row.get('邮编'), row.get('收货地址'),
-                row.get('商品类别'), row.get('二次备注'), row.get('商品单位'),
-                row.get('币别'), row.get('会员邮箱'), row.get('订单标签'),
-                row.get('平台交易状态'), row.get('赠品'), row.get('是否退款'),
-                row.get('地区信息'), row.get('确认收货时间'), row.get('作废')
-            )
+                row.get('店铺类型', ''),
+                row.get('店铺名称', ''),
+                row.get('分销商名称', ''),
+                row.get('单据编号', ''),
+                row.get('订单类型', ''),
+                row.get('拍单时间', ''),
+                row.get('付款时间', ''),
+                row.get('审核时间', ''),
+                row.get('会员代码', ''),
+                row.get('会员名称', ''),
+                row.get('内部便签', ''),
+                row.get('业务员', ''),
+                row.get('建议仓库', ''),
+                row.get('建议快递', ''),
+                row.get('到账', ''),
+                row.get('商品图片', ''),
+                row.get('品牌', ''),
+                row.get('商品税率', ''),
+                row.get('商品代码', ''),
+                row.get('商品名称', ''),
+                row.get('商品简称', ''),
+                row.get('规格代码', ''),
+                row.get('规格名称', ''),
+                row.get('商品备注', ''),
+                row.get('代发订单', ''),
+                row.get('订单标记', ''),
+                row.get('预计发货时间', ''),
+                row.get('订购数', ''),
+                row.get('总重量', ''),
+                row.get('折扣', ''),
+                row.get('标准进价', ''),
+                row.get('标准单价', ''),
+                row.get('标准金额', ''),
+                row.get('实际单价', ''),
+                row.get('实际金额', ''),
+                row.get('让利后金额', ''),
+                row.get('让利金额', ''),
+                row.get('物流费用', ''),
+                row.get('成本总价', ''),
+                row.get('买家备注', ''),
+                row.get('卖家备注', ''),
+                row.get('制单人', ''),
+                row.get('商品实际利润', ''),
+                row.get('商品标准利润', ''),
+                row.get('商品已发货数量', ''),
+                row.get('平台旗帜', ''),
+                row.get('发货时间', ''),
+                row.get('原产地', ''),
+                row.get('平台商品名称', ''),
+                row.get('平台规格名称', ''),
+                row.get('供应商', ''),
+                row.get('赠品来源', ''),
+                row.get('买家支付金额', ''),
+                row.get('平台支付金额', ''),
+                row.get('其他服务费', ''),
+                row.get('发票种类', ''),
+                row.get('发票抬头类型', ''),
+                row.get('发票类型', ''),
+                row.get('开户行', ''),
+                row.get('账号', ''),
+                row.get('发票电话', ''),
+                row.get('发票地址', ''),
+                row.get('收货邮箱', ''),
+                row.get('周期购商品', ''),
+                row.get('平台单号', ''),
+                row.get('到账时间', ''),
+                row.get('附加信息', ''),
+                row.get('发票抬头', ''),
+                row.get('发票内容', ''),
+                row.get('纳税人识别号', ''),
+                row.get('收货人', ''),
+                row.get('收货人手机', ''),
+                row.get('邮编', ''),
+                row.get('收货地址', ''),
+                row.get('商品类别', ''),
+                row.get('二次备注', ''),
+                row.get('商品单位', ''),
+                row.get('币别', ''),
+                row.get('会员邮箱', ''),
+                row.get('订单标签', ''),
+                row.get('平台交易状态', ''),
+                row.get('赠品', ''),
+                row.get('是否退款', ''),
+                row.get('地区信息', ''),
+                row.get('确认收货时间', ''),
+                row.get('作废', ''),
+                current_time  # 添加创建时间
+            ]
+            data = tuple(data)  # 转换为元组
 
             # 执行插入
             cursor.execute(insert_sql, data)
 
-            if cursor.rowcount > 0:
+            # 记录rowcount用于调试
+            rowcount = cursor.rowcount
+            logger.info(f'第 {idx} 行插入结果: rowcount={rowcount}')
+            
+            if rowcount > 0:
                 success_count += 1
+                logger.info(f'第 {idx} 行: 成功插入')
             else:
                 duplicate_count += 1
+                logger.info(f'第 {idx} 行: 重复记录（已存在）')
 
+        except sqlite3.IntegrityError as e:
+            # 处理数据库完整性错误（如唯一约束违反），计为重复
+            logger.error(f'第 {idx} 行发生完整性错误: {e}')
+            if "UNIQUE constraint failed" in str(e) or "PRIMARY KEY constraint failed" in str(e):
+                duplicate_count += 1
+                logger.info(f'第 {idx} 行: 检测到唯一约束违反，计为重复')
+            else:
+                logger.error(f'第 {idx} 行发生其他完整性错误: {e}')
+                error_count += 1
+            continue
         except Exception as e:
-            print(f'插入第 {idx} 行时出错: {e}')
+            logger.error(f'插入第 {idx} 行时出错: {e}')
+            import traceback
+            logger.error(f"详细错误追踪:\n{traceback.format_exc()}")
             error_count += 1
             continue
 
@@ -322,26 +703,32 @@ def register_inventory_upload_routes(app):
     @token_required
     def upload_inventory():
         """处理库存CSV文件上传"""
-        print('收到库存文件上传请求')
+        # 创建日志记录器
+        logger, log_filename = create_upload_logger("inventory_upload")
+        logger.info('收到库存文件上传请求')
+        logger.info(f'当前用户: {g.current_user["username"]}, 角色: {g.current_user["role"]}')
 
         if 'file' not in request.files:
-            print('错误：请求中没有文件')
+            logger.error('错误：请求中没有文件')
             return jsonify({'error': '没有文件'}), 400
 
         file = request.files['file']
         if file.filename == '':
-            print('错误：文件名为空')
+            logger.error('错误：文件名为空')
             return jsonify({'error': '未选择文件'}), 400
 
-        print(f'开始处理库存文件: {file.filename}')
+        logger.info(f'开始处理库存文件: {file.filename}')
+        logger.info(f'文件大小: {file.content_length} 字节')
 
         try:
             # 处理库存CSV文件，传递当前用户信息用于记录操作日志
-            return process_inventory_csv(file, g.current_user)
+            result = process_inventory_csv(file, g.current_user)
+            logger.info('库存文件处理完成')
+            return result
         except Exception as e:
-            print(f'处理库存文件时出错: {str(e)}')
+            logger.error(f'处理库存文件时出错: {str(e)}')
             import traceback
-            traceback.print_exc()
+            logger.error(f"详细错误追踪:\n{traceback.format_exc()}")
             return jsonify({'error': str(e)}), 500
 
 
@@ -352,38 +739,32 @@ def process_inventory_csv(file, current_user=None):
         file: 上传的CSV文件对象
         current_user: 当前用户信息字典（包含username和role字段）
     """
-    import pandas as pd
-    import io
+    # 创建日志记录器
+    logger, log_filename = create_upload_logger("inventory_process")
+    logger.info('开始处理库存CSV数据')
+    if current_user:
+        logger.info(f'操作用户: {current_user.get("username", "unknown")}, 角色: {current_user.get("role", "unknown")}')
     
-    # 读取CSV文件（使用GB18030编码，因为商品库存.csv是GB18030编码）
-    content = file.read()
+    # 首先验证CSV文件格式，传递必需的列列表
+    required_columns = ['商品名称', '仓库', '数量', '可销数', '可配数', '锁定数', '商品建档日期']
+    logger.info(f'开始验证CSV文件格式，必需列: {required_columns}')
+    is_valid, msg, df = FileValidator.validate_csv_format(file, required_columns)
     
-    try:
-        # 尝试用GB18030解码
-        decoded_content = content.decode('gb18030')
-    except UnicodeDecodeError:
-        try:
-            # 如果GB18030失败，尝试utf-8
-            decoded_content = content.decode('utf-8')
-        except UnicodeDecodeError as e:
-            print(f'文件编码解码失败: {e}')
-            return jsonify({'error': f'文件编码不支持，请使用GB18030或UTF-8编码: {str(e)}'}), 400
+    if not is_valid:
+        logger.error(f'CSV文件格式验证失败: {msg}')
+        return jsonify({'error': f'文件格式错误: {msg}'}), 400
     
-    # 使用pandas读取CSV
-    try:
-        df = pd.read_csv(io.StringIO(decoded_content))
-        print(f'成功读取CSV文件，共 {len(df)} 行，{len(df.columns)} 列')
-        print(f'列名: {df.columns.tolist()}')
-    except Exception as e:
-        print(f'读取CSV文件失败: {e}')
-        return jsonify({'error': f'读取CSV文件失败: {str(e)}'}), 400
+    # 使用验证函数返回的DataFrame，避免重复读取
+    logger.info(f'CSV文件验证通过，共 {len(df)} 行，{len(df.columns)} 列')
+    logger.info(f'列名: {df.columns.tolist()}')
+    logger.info(f'文件编码: {msg.split("编码: ")[-1] if "编码:" in msg else "未知"}')
     
-    # 检查必要的列是否存在
+    # 检查必要的列是否存在（验证函数已检查，但再次确认）
     required_columns = ['商品名称', '仓库', '数量', '可销数', '可配数', '锁定数', '商品建档日期']
     missing_columns = [col for col in required_columns if col not in df.columns]
     
     if missing_columns:
-        print(f'CSV文件缺少必要列: {missing_columns}')
+        logger.error(f'CSV文件缺少必要列: {missing_columns}')
         return jsonify({'error': f'CSV文件缺少必要列: {missing_columns}'}), 400
     
     conn = get_db_connection()
@@ -392,15 +773,15 @@ def process_inventory_csv(file, current_user=None):
     # 记录数据库当前状态
     cursor.execute('SELECT COUNT(*) FROM Inventory')
     db_existing_count = cursor.fetchone()[0]
-    print(f'📊 数据库当前记录数: {db_existing_count}')
+    logger.info(f'📊 数据库当前记录数: {db_existing_count}')
     
     # 统计CSV中的唯一记录数（基于商品名称+仓库）
     unique_keys = df[['商品名称', '仓库']].drop_duplicates()
     csv_unique_count = len(unique_keys)
-    print(f'📊 CSV文件唯一记录数（商品名称+仓库）: {csv_unique_count}')
-    print(f'📊 CSV文件总行数: {len(df)}')
-    print(f'📊 CSV文件列数: {len(df.columns)}')
-    print('=' * 60)
+    logger.info(f'📊 CSV文件唯一记录数（商品名称+仓库）: {csv_unique_count}')
+    logger.info(f'📊 CSV文件总行数: {len(df)}')
+    logger.info(f'📊 CSV文件列数: {len(df.columns)}')
+    logger.info('=' * 60)
     
     # 定义清理函数，去除字符串开头和结尾的空白字符（空格、制表符等）
     def clean_value(value):

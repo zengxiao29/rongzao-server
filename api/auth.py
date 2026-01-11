@@ -6,6 +6,7 @@ import bcrypt
 from dbpy.database import get_db_connection
 from utils.auth import generate_token, verify_token, token_required
 from utils.operation_logger import log_operation
+from utils.error_handler import handle_api_error
 
 def register_auth_routes(app):
     """注册认证相关 API 路由"""
@@ -84,10 +85,7 @@ def register_auth_routes(app):
                 conn.close()
 
         except Exception as e:
-            print(f'登录失败: {str(e)}')
-            import traceback
-            traceback.print_exc()
-            return jsonify({'error': str(e)}), 500
+            return handle_api_error(e, "登录")
 
     @app.route('/api/auth/verify', methods=['GET'])
     @token_required
@@ -111,8 +109,7 @@ def register_auth_routes(app):
                 'user': g.current_user
             })
         except Exception as e:
-            print(f'验证失败: {str(e)}')
-            return jsonify({'error': str(e)}), 500
+            return handle_api_error(e, "验证")
 
     @app.route('/api/auth/logout', methods=['POST'])
     @token_required
@@ -137,5 +134,4 @@ def register_auth_routes(app):
                 'message': '登出成功'
             })
         except Exception as e:
-            print(f'登出失败: {str(e)}')
-            return jsonify({'error': str(e)}), 500
+            return handle_api_error(e, "登出")
