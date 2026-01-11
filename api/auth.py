@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 from flask import jsonify, request, g
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import bcrypt
 from dbpy.database import get_db_connection
 from utils.auth import generate_token, verify_token, token_required
 from utils.operation_logger import log_operation
 
-
 def register_auth_routes(app):
     """注册认证相关 API 路由"""
 
     @app.route('/api/auth/login', methods=['POST'])
+    @app.limiter.limit("10 per hour")  # 同一个IP 10次/小时
     def auth_login():
         """
         用户登录

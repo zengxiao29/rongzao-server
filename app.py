@@ -3,6 +3,8 @@ import os
 from flask import Flask
 from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # 加载 .env 文件中的环境变量
 load_dotenv()
@@ -31,6 +33,16 @@ else:
 
 # 启用CSRF保护
 csrf = CSRFProtect(app)
+
+# 配置速率限制
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["1 per second"]  # 默认限制：每秒1个请求
+)
+limiter.init_app(app)
+
+# 将limiter附加到app对象，以便在路由中使用
+app.limiter = limiter
 
 # 注册所有路由
 register_routes(app)

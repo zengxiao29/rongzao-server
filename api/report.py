@@ -13,6 +13,7 @@ def register_report_routes(app):
 
     @app.route('/api/analyse/generate-report', methods=['POST'])
     @token_required
+    @app.limiter.limit("10 per minute")  # 每分钟10个请求，比默认限制更宽松
     def generate_report():
         """生成报表数据（网页版）"""
         try:

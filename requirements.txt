@@ -7,3 +7,4 @@ python-dotenv
 bcrypt
 xlrd
 Flask-WTF
+Flask-Limiter
