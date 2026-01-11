@@ -140,6 +140,19 @@ function renderEmptyState() {
 }
 
 /**
+ * HTML 转义函数，防止 XSS 攻击
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
  * 渲染表格
  */
 function renderTable(products) {
@@ -162,12 +175,12 @@ function renderTable(products) {
     let html = '';
     products.forEach(product => {
         html += `
-            <tr data-product-id="${product.id}">
-                <td>${product.id}</td>
-                <td>${product.name || ''}</td>
-                <td class="editable" data-field="alias" data-value="${product.alias || ''}">${product.alias || ''}</td>
-                <td class="editable" data-field="category" data-value="${product.category_name || ''}">${product.category_name || '-'}</td>
-                <td class="editable" data-field="mapped_title" data-value="${product.mapped_title || ''}">${product.mapped_title || '-'}</td>
+            <tr data-product-id="${escapeHtml(String(product.id))}">
+                <td>${escapeHtml(String(product.id))}</td>
+                <td>${escapeHtml(product.name || '')}</td>
+                <td class="editable" data-field="alias" data-value="${escapeHtml(product.alias || '')}">${escapeHtml(product.alias || '')}</td>
+                <td class="editable" data-field="category" data-value="${escapeHtml(product.category_name || '')}">${escapeHtml(product.category_name || '-')}</td>
+                <td class="editable" data-field="mapped_title" data-value="${escapeHtml(product.mapped_title || '')}">${escapeHtml(product.mapped_title || '-')}</td>
             </tr>
         `;
     });
