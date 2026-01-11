@@ -7,13 +7,11 @@ from dbpy.database import get_db_connection
 from utils.auth import token_required
 from utils.operation_logger import log_operation
 
-
 def register_report_routes(app):
     """注册报表相关 API 路由"""
 
     @app.route('/api/analyse/generate-report', methods=['POST'])
     @token_required
-    @app.limiter.limit("10 per minute")  # 每分钟10个请求，比默认限制更宽松
     def generate_report():
         """生成报表数据（网页版）"""
         try:
