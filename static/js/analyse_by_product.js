@@ -63,6 +63,14 @@ async function loadProductDetails(productType, startDate, endDate) {
             headers['Authorization'] = `Bearer ${token}`;
         }
         
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
         const response = await fetch(`/api/analyse/product-details?product_type=${encodeURIComponent(productType)}&start_date=${startDate}&end_date=${endDate}&data_type=${currentDataType}`, {
             method: 'GET',
             headers: headers

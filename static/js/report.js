@@ -115,6 +115,14 @@ async function loadReportData() {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
         const response = await fetch('/api/analyse/generate-report', {
             method: 'POST',
             headers: headers,
@@ -168,6 +176,14 @@ async function exportToPDF() {
 
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
         }
 
         const response = await fetch('/api/analyse/export-weekly-report', {

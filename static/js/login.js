@@ -16,11 +16,21 @@ async function handleLogin(event) {
     loginButton.textContent = '登录中...';
 
     try {
+        const headers = {
+            'Content-Type': 'application/json',
+        };
+
+        // 获取CSRF token并添加到请求头
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="csrf_token"]')?.value;
+        
+        if (csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+
         const response = await fetch('/api/auth/login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: JSON.stringify({
                 username: username,
                 password: password,
