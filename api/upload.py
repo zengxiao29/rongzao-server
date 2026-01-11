@@ -139,6 +139,14 @@ def register_upload_routes(app):
                 file.save(tmp_file.name)
                 logger.info(f'文件已保存到临时位置: {tmp_file.name}')
                 
+                # 验证文件大小
+                logger.info('开始验证文件大小...')
+                is_size_valid, size_msg = FileValidator.validate_file_size(tmp_file.name, max_size_mb=350)
+                if not is_size_valid:
+                    os.unlink(tmp_file.name)  # 删除临时文件
+                    logger.error(f'文件大小验证失败: {size_msg}')
+                    return jsonify({'error': f'文件大小错误: {size_msg}'}), 400
+                
                 # 验证文件格式
                 logger.info('开始验证文件格式...')
                 is_valid, msg, df = FileValidator.validate_excel_format(tmp_file.name)
@@ -226,6 +234,14 @@ def register_upload_routes(app):
                 file.save(tmp_file.name)
                 logger.info(f'文件已保存到临时位置: {tmp_file.name}')
                 logger.info(f'临时文件大小: {os.path.getsize(tmp_file.name)} 字节')
+                
+                # 验证文件大小
+                logger.info('开始验证文件大小...')
+                is_size_valid, size_msg = FileValidator.validate_file_size(tmp_file.name, max_size_mb=350)
+                if not is_size_valid:
+                    os.unlink(tmp_file.name)  # 删除临时文件
+                    logger.error(f'文件大小验证失败: {size_msg}')
+                    return jsonify({'error': f'文件大小错误: {size_msg}'}), 400
                 
                 # 验证文件格式
                 logger.info('开始验证文件格式...')
@@ -333,6 +349,14 @@ def register_upload_routes(app):
                 file.save(tmp_file.name)
                 logger.info(f'文件已保存到临时位置: {tmp_file.name}')
                 logger.info(f'临时文件大小: {os.path.getsize(tmp_file.name)} 字节')
+                
+                # 验证文件大小
+                logger.info('开始验证文件大小...')
+                is_size_valid, size_msg = FileValidator.validate_file_size(tmp_file.name, max_size_mb=350)
+                if not is_size_valid:
+                    os.unlink(tmp_file.name)  # 删除临时文件
+                    logger.error(f'文件大小验证失败: {size_msg}')
+                    return jsonify({'error': f'文件大小错误: {size_msg}'}), 400
                 
                 # 验证文件格式
                 logger.info('开始验证文件格式...')
@@ -721,9 +745,29 @@ def register_inventory_upload_routes(app):
         logger.info(f'文件大小: {file.content_length} 字节')
 
         try:
+            # 保存文件到临时目录进行大小验证
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+                file.save(tmp_file.name)
+                logger.info(f'文件已保存到临时位置: {tmp_file.name}')
+                
+                # 验证文件大小
+                logger.info('开始验证文件大小...')
+                is_size_valid, size_msg = FileValidator.validate_file_size(tmp_file.name, max_size_mb=350)
+                if not is_size_valid:
+                    os.unlink(tmp_file.name)  # 删除临时文件
+                    logger.error(f'文件大小验证失败: {size_msg}')
+                    return jsonify({'error': f'文件大小错误: {size_msg}'}), 400
+                
+                # 重新打开文件对象供后续处理
+                tmp_file_path = tmp_file.name
+            
             # 处理库存CSV文件，传递当前用户信息用于记录操作日志
-            result = process_inventory_csv(file, g.current_user)
+            result = process_inventory_csv(tmp_file_path, g.current_user)
             logger.info('库存文件处理完成')
+            
+            # 删除临时文件
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
             return result
         except Exception as e:
             logger.error(f'处理库存文件时出错: {str(e)}')
@@ -732,11 +776,11 @@ def register_inventory_upload_routes(app):
             return jsonify({'error': str(e)}), 500
 
 
-def process_inventory_csv(file, current_user=None):
+def process_inventory_csv(file_input, current_user=None):
     """处理库存CSV数据并插入/更新到Inventory表
     
     Args:
-        file: 上传的CSV文件对象
+        file_input: 上传的CSV文件路径（字符串）或文件对象
         current_user: 当前用户信息字典（包含username和role字段）
     """
     # 创建日志记录器
@@ -748,7 +792,7 @@ def process_inventory_csv(file, current_user=None):
     # 首先验证CSV文件格式，传递必需的列列表
     required_columns = ['商品名称', '仓库', '数量', '可销数', '可配数', '锁定数', '商品建档日期']
     logger.info(f'开始验证CSV文件格式，必需列: {required_columns}')
-    is_valid, msg, df = FileValidator.validate_csv_format(file, required_columns)
+    is_valid, msg, df = FileValidator.validate_csv_format(file_input, required_columns)
     
     if not is_valid:
         logger.error(f'CSV文件格式验证失败: {msg}')
