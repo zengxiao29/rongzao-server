@@ -818,6 +818,15 @@ function handleTableRowClick(row) {
     // 加载商品详情
     if (typeof loadProductDetails === 'function') {
         loadProductDetails(productType, startDate, endDate);
+        
+        // 延迟滚动，等待曲线图加载完成
+        setTimeout(() => {
+            const detailsSection = document.getElementById('detailsSection');
+            if (detailsSection && detailsSection.style.display !== 'none') {
+                // 平滑滚动到曲线图区域，让曲线图的上半部分可见
+                detailsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 300); // 延迟300ms，确保曲线图已经显示
     } else {
         console.error('loadProductDetails 函数未定义');
     }
